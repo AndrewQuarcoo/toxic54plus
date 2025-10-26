@@ -252,29 +252,29 @@ function ResultsPageContent() {
                     <div>
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-xl font-semibold text-black">Report Details</h3>
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getToxicityColor(selectedItem.toxicity_likelihood)}`}>
-                          {selectedItem.toxicity_likelihood}
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getToxicityColor((selectedItem as Report).toxicity_likelihood)}`}>
+                          {(selectedItem as Report).toxicity_likelihood}
                         </span>
                       </div>
 
                       <div className="space-y-4 mb-6">
                         <div>
                           <label className="text-sm font-medium text-gray-700">Original Input</label>
-                          <p className="text-black mt-1">{selectedItem.original_input}</p>
+                          <p className="text-black mt-1">{(selectedItem as Report).original_input}</p>
                         </div>
                         
-                        {selectedItem.translated_input && (
+                        {(selectedItem as Report).translated_input && (
                           <div>
                             <label className="text-sm font-medium text-gray-700">Translated (English)</label>
-                            <p className="text-black mt-1">{selectedItem.translated_input}</p>
+                            <p className="text-black mt-1">{(selectedItem as Report).translated_input}</p>
                           </div>
                         )}
 
-                        {selectedItem.symptoms && selectedItem.symptoms.length > 0 && (
+                        {(selectedItem as Report).symptoms && (selectedItem as Report).symptoms.length > 0 && (
                           <div>
                             <label className="text-sm font-medium text-gray-700">Symptoms Detected</label>
                             <div className="flex flex-wrap gap-2 mt-2">
-                              {selectedItem.symptoms.map((symptom, idx) => (
+                              {(selectedItem as Report).symptoms.map((symptom, idx) => (
                                 <span key={idx} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
                                   {symptom}
                                 </span>
@@ -298,31 +298,31 @@ function ResultsPageContent() {
                           )}
                           <div>
                             <label className="text-sm font-medium text-gray-700">Confidence</label>
-                            <p className="text-black">{(selectedItem.confidence_score * 100).toFixed(1)}%</p>
+                            <p className="text-black">{((selectedItem as Report).confidence_score * 100).toFixed(1)}%</p>
                           </div>
                           <div>
                             <label className="text-sm font-medium text-gray-700">Status</label>
-                            <p className="text-black capitalize">{selectedItem.status}</p>
+                            <p className="text-black capitalize">{(selectedItem as Report).status}</p>
                           </div>
                         </div>
 
                         <div>
                           <label className="text-sm font-medium text-gray-700">AI Diagnosis</label>
-                          <p className="text-black mt-1">{selectedItem.ai_diagnosis}</p>
+                          <p className="text-black mt-1">{(selectedItem as Report).ai_diagnosis}</p>
                         </div>
 
-                        {selectedItem.ai_diagnosis_twi && (
+                        {(selectedItem as Report).ai_diagnosis_twi && (
                           <div>
                             <label className="text-sm font-medium text-gray-700">AI Diagnosis (Twi)</label>
-                            <p className="text-black mt-1">{selectedItem.ai_diagnosis_twi}</p>
+                            <p className="text-black mt-1">{(selectedItem as Report).ai_diagnosis_twi}</p>
                           </div>
                         )}
 
-                        {selectedItem.possible_causes && selectedItem.possible_causes.length > 0 && (
+                        {(selectedItem as Report).possible_causes && (selectedItem as Report).possible_causes.length > 0 && (
                           <div>
                             <label className="text-sm font-medium text-gray-700">Possible Causes</label>
                             <ul className="mt-2 list-disc list-inside space-y-1">
-                              {selectedItem.possible_causes.map((cause, idx) => (
+                              {(selectedItem as Report).possible_causes.map((cause, idx) => (
                                 <li key={idx} className="text-black">{cause}</li>
                               ))}
                             </ul>
@@ -334,26 +334,26 @@ function ResultsPageContent() {
                     <div>
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-xl font-semibold text-black">Image Analysis</h3>
-                        <span className={`text-sm px-3 py-1 rounded ${selectedItem.toxicity_detected ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
-                          {selectedItem.toxicity_detected ? 'Risk Detected' : 'No Risk'}
+                        <span className={`text-sm px-3 py-1 rounded ${(selectedItem as Image).toxicity_detected ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                          {(selectedItem as Image).toxicity_detected ? 'Risk Detected' : 'No Risk'}
                         </span>
                       </div>
 
                       <div className="space-y-4 mb-6">
                         <div>
                           <label className="text-sm font-medium text-gray-700">Image Type</label>
-                          <p className="text-black">{selectedItem.image_type}</p>
+                          <p className="text-black">{(selectedItem as Image).image_type}</p>
                         </div>
 
                         <div>
                           <label className="text-sm font-medium text-gray-700">Analysis Result</label>
-                          <p className="text-black mt-1">{selectedItem.prediction}</p>
+                          <p className="text-black mt-1">{(selectedItem as Image).prediction}</p>
                         </div>
 
-                        {selectedItem.prediction_twi && (
+                        {(selectedItem as Image).prediction_twi && (
                           <div>
                             <label className="text-sm font-medium text-gray-700">Analysis Result (Twi)</label>
-                            <p className="text-black mt-1">{selectedItem.prediction_twi}</p>
+                            <p className="text-black mt-1">{(selectedItem as Image).prediction_twi}</p>
                           </div>
                         )}
 
@@ -372,19 +372,19 @@ function ResultsPageContent() {
                           )}
                           <div>
                             <label className="text-sm font-medium text-gray-700">Confidence</label>
-                            <p className="text-black">{(selectedItem.confidence * 100).toFixed(1)}%</p>
+                            <p className="text-black">{((selectedItem as Image).confidence * 100).toFixed(1)}%</p>
                           </div>
-                          {selectedItem.contaminant_type && (
+                          {(selectedItem as Image).contaminant_type && (
                             <div>
                               <label className="text-sm font-medium text-gray-700">Contaminant</label>
-                              <p className="text-black capitalize">{selectedItem.contaminant_type}</p>
+                              <p className="text-black capitalize">{(selectedItem as Image).contaminant_type}</p>
                             </div>
                           )}
                         </div>
 
                         <div>
                           <label className="text-sm font-medium text-gray-700">Image URL</label>
-                          <p className="text-blue-600 truncate">{selectedItem.image_url}</p>
+                          <p className="text-blue-600 truncate">{(selectedItem as Image).image_url}</p>
                         </div>
                       </div>
                     </div>
