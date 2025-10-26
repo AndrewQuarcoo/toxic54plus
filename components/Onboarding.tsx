@@ -2,12 +2,16 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import PhoneInput from 'react-phone-number-input'
 import 'react-phone-number-input/style.css'
 import { useIsMobile } from '@/app/hooks/use-mobile'
+import { useAuth } from '@/app/contexts/AuthContext'
 
 export default function Onboarding() {
   const isMobile = useIsMobile()
+  const router = useRouter()
+  const { register } = useAuth()
   const [formData, setFormData] = useState({
     location: '',
     phoneNumber: '',
@@ -15,6 +19,8 @@ export default function Onboarding() {
   })
   const [locationError, setLocationError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [pendingSignup, setPendingSignup] = useState<any>(null)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target
@@ -77,8 +83,21 @@ export default function Onboarding() {
     )
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    // Load pending signup data
+    const stored = sessionStorage.getItem('pendingSignup')
+    if (stored) {
+      setPendingSignup(JSON.parse(stored))
+    } else {
+      // No pending signup, redirect to signup
+      router.push('/signup')
+    }
+  }, [router])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
+    setLocationError('')
     
     // Validation
     if (!formData.location) {
@@ -87,19 +106,42 @@ export default function Onboarding() {
     }
     
     if (!formData.phoneNumber) {
-      alert('Phone number is required.')
+      setError('Phone number is required.')
       return
     }
     
     if (!formData.gpsEnabled) {
-      alert('GPS permission is required to continue.')
+      setError('GPS permission is required to continue.')
       return
     }
     
-    console.log('Onboarding form submitted:', formData)
-    // Handle form submission here
-    // Redirect to dashboard
-    window.location.href = '/dashboard'
+    if (!pendingSignup) {
+      setError('Signup data not found. Please start over.')
+      return
+    }
+    
+    setIsLoading(true)
+    
+    try {
+      // Create account with all data combined
+      await register({
+        email: pendingSignup.email,
+        password: pendingSignup.password,
+        username: pendingSignup.username,
+        full_name: pendingSignup.full_name,
+        phone_number: formData.phoneNumber,
+        name: pendingSignup.full_name // Backend expects "name" field
+      })
+      
+      // Clear pending signup data
+      sessionStorage.removeItem('pendingSignup')
+      
+      // Redirect to dashboard
+      router.push('/dashboard')
+    } catch (err: any) {
+      setError(err.message || 'Registration failed. Please try again.')
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -125,6 +167,13 @@ export default function Onboarding() {
               Help us personalize your experience
             </p>
           </div>
+
+          {/* Error Message */}
+          {(error || locationError) && (
+            <div className={`mb-4 p-3 bg-red-50 border border-red-200 rounded-lg ${isMobile ? 'text-xs' : 'text-sm'}`}>
+              <p className="text-red-600">{error || locationError}</p>
+            </div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className={isMobile ? 'space-y-5' : 'space-y-8'}>
@@ -207,7 +256,9 @@ export default function Onboarding() {
                 isMobile ? 'py-2.5 text-sm' : 'py-4 text-lg'
               }`}
             >
-              <span className="relative z-10">Complete Setup</span>
+              <span className="relative z-10">
+                {isLoading ? 'Creating Account...' : 'Complete Setup'}
+              </span>
               <div className="absolute inset-0 bg-green-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
             </button>
           </form>

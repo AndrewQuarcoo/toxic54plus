@@ -28,19 +28,22 @@ export default function SignupAuth() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    setIsLoading(true)
     
-    try {
-      await register({
-        email: formData.email,
-        password: formData.password,
-        firstName: formData.firstName,
-        lastName: formData.lastName
-      })
-    } catch (err: any) {
-      setError(err.message || 'Registration failed. Please try again.')
-      setIsLoading(false)
+    // Store signup data temporarily and go to onboarding
+    const signupData = {
+      email: formData.email,
+      password: formData.password,
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      full_name: `${formData.firstName} ${formData.lastName}`,
+      username: formData.firstName.toLowerCase()
     }
+    
+    // Store in sessionStorage (temporary, will be cleared after registration)
+    sessionStorage.setItem('pendingSignup', JSON.stringify(signupData))
+    
+    // Navigate to onboarding
+    window.location.href = '/onboarding'
   }
 
   return (
@@ -170,9 +173,9 @@ export default function SignupAuth() {
                 isMobile ? 'py-2.5 text-sm' : 'py-3'
               }`}
             >
-              <span className="relative z-10">
-                {isLoading ? 'Creating Account...' : 'Create Account'}
-              </span>
+                     <span className="relative z-10">
+                       Next
+                     </span>
               <div className="absolute inset-0 bg-green-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
             </button>
           </form>

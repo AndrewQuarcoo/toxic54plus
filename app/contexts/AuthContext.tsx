@@ -95,21 +95,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (formData: any) => {
     setLoading(true)
     try {
+      // Build request body with all provided fields
+      const requestBody: any = {
+        email: formData.email,
+        password: formData.password,
+        username: formData.username,
+        full_name: formData.full_name
+      }
+      
+      // Add phone_number if provided
+      if (formData.phone_number) {
+        requestBody.phone_number = formData.phone_number
+      }
+      
+      // Add name field if provided (backend expects this)
+      if (formData.name) {
+        requestBody.name = formData.name
+      }
+      
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          username: formData.email.split('@')[0],
-          full_name: `${formData.firstName} ${formData.lastName}`,
-          phone_number: ''
-        })
+        body: JSON.stringify(requestBody)
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || 'Registration failed')
+        const errorData = await response.json()
+        console.error('Registration error:', errorData)
+        throw new Error(errorData.detail || errorData.msg || 'Registration failed')
       }
 
       const data = await response.json()
@@ -119,7 +132,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('access_token', data.access_token)
       localStorage.setItem('user', JSON.stringify(data.user))
 
-      router.push('/onboarding')
+      // Redirect based on flow
+      if (formData.skipOnboarding) {
+        router.push('/dashboard')
+      } else {
+        // This will be handled by the calling component now
+        // No redirect here since onboarding handles it
+      }
     } catch (error) {
       console.error('Registration error:', error)
       throw error
