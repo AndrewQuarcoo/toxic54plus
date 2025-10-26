@@ -35,9 +35,9 @@ export default function Dashboard({ children }: DashboardProps) {
       )}
 
       {/* Sidebar */}
-      <div className={`${sidebarCollapsed ? 'w-16' : 'w-64'} bg-white border-r border-black transform transition-all duration-300 ease-in-out flex flex-col ${
+      <aside className={`${sidebarCollapsed ? 'w-16' : 'w-64'} bg-white border-r border-black transform transition-all duration-300 ease-in-out flex flex-col ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-      } fixed lg:static inset-y-0 left-0 z-50 w-64 lg:w-64`}>
+      } fixed lg:static inset-y-0 left-0 z-50`}>
         
         {/* Sidebar Header */}
         <div className="flex items-center justify-between h-12 px-4 border-b border-gray-200">
@@ -155,7 +155,7 @@ export default function Dashboard({ children }: DashboardProps) {
             )}
           </div>
         </div>
-      </div>
+      </aside>
 
       {/* Main content */}
       <div className="flex-1 h-full flex flex-col min-w-0">

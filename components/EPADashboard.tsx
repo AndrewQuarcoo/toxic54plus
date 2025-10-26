@@ -35,7 +35,7 @@ export default function EPADashboard({ children }: EPADashboardProps) {
       )}
 
       {/* Sidebar */}
-      <div className={`${sidebarCollapsed ? 'w-16' : 'w-64'} bg-white border-r border-black transform transition-all duration-300 ease-in-out flex flex-col ${
+      <aside className={`${sidebarCollapsed ? 'w-16' : 'w-64'} bg-white border-r border-black transform transition-all duration-300 ease-in-out flex flex-col ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       } fixed lg:static inset-y-0 left-0 z-50`}>
         
@@ -155,7 +155,7 @@ export default function EPADashboard({ children }: EPADashboardProps) {
             )}
           </div>
         </div>
-      </div>
+      </aside>
 
       {/* Main content */}
       <div className={`flex-1 h-full flex flex-col transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-0' : 'lg:ml-0'}`}>
