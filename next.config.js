@@ -1,8 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // App Router is enabled by default in Next.js 15+
-  // Remove deprecated experimental.appDir option
-  outputFileTracingRoot: undefined,
+  // Cloudflare Pages configuration
+  outputFileTracingRoot: require('path').join(__dirname),
 }
 
 module.exports = nextConfig
