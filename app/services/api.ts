@@ -141,15 +141,24 @@ export async function getCurrentUser(): Promise<User> {
 }
 
 // Reports (Maps to Chat in frontend)
-export async function submitReport(symptoms: string, location: string, latitude?: number, longitude?: number): Promise<Report> {
-  const response = await fetch(`${API_BASE_URL}/reports/create`, {
+export async function submitReport(
+  original_input: string, 
+  location: string, 
+  input_language: 'en' | 'tw' = 'en',
+  latitude?: number, 
+  longitude?: number
+): Promise<Report> {
+  const response = await fetch(`${API_BASE_URL}/reports/submit`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({
-      symptoms,
+      original_input,
+      input_language,
+      input_type: 'text',
       location,
       latitude,
-      longitude
+      longitude,
+      region: location
     })
   })
   

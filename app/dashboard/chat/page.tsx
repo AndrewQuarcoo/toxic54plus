@@ -86,7 +86,7 @@ function ChatPageContent() {
       // First message creates a report
       if (!sessionId && !reportId) {
         // Create report from user's symptom message
-        const report = await submitReport(message, 'Ghana')
+        const report = await submitReport(message, 'Ghana', userLanguage)
         setReportId(report.id)
         setSessionId(report.chat_session_id || null)
         localStorage.setItem('current_report_id', report.id)
@@ -146,6 +146,30 @@ function ChatPageContent() {
               </div>
               <h2 className={`font-bold text-gray-900 ${isMobile ? 'text-xl mb-2' : 'text-2xl mb-2'}`}>Welcome to AI Health Assistant</h2>
               <p className={`text-gray-600 ${isMobile ? 'text-sm mb-6' : 'mb-8'}`}>I'm here to help you with your health and fitness questions. Start a conversation below!</p>
+              
+              {/* Language Selector */}
+              <div className={`flex justify-center gap-2 ${isMobile ? 'mb-4' : 'mb-6'}`}>
+                <button
+                  onClick={() => setUserLanguage('en')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    userLanguage === 'en'
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  English
+                </button>
+                <button
+                  onClick={() => setUserLanguage('tw')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    userLanguage === 'tw'
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Twi
+                </button>
+              </div>
               
               {/* Centered Input */}
               <div className={`w-full ${isMobile ? '' : 'max-w-lg'}`}>
@@ -226,6 +250,30 @@ function ChatPageContent() {
 
             {/* Input Area */}
             <div className={`bg-white rounded-lg shadow-sm border border-gray-200 ${isMobile ? 'p-4' : 'p-6'}`}>
+              {/* Language Selector for Active Chat */}
+              <div className="flex justify-end gap-2 mb-4">
+                <button
+                  onClick={() => setUserLanguage('en')}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    userLanguage === 'en'
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  EN
+                </button>
+                <button
+                  onClick={() => setUserLanguage('tw')}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    userLanguage === 'tw'
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Twi
+                </button>
+              </div>
+              
               <PromptInputBox
                 onSend={handleSendMessage}
                 isLoading={isTyping}
