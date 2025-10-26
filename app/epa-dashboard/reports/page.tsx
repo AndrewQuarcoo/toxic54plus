@@ -177,10 +177,10 @@ function ReportsPageContent() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {getPriorityBadge(report.priority)}
+                        {getPriorityBadge(report.priority || 'NONE')}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {getStatusBadge(report.status)}
+                        {getStatusBadge(report.status || 'pending')}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button className="text-orange-600 hover:text-orange-900 mr-3 flex items-center gap-1">
