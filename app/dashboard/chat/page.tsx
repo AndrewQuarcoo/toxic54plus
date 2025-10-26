@@ -11,6 +11,8 @@ import ProtectedRoute from '@/app/components/ProtectedRoute'
 interface Message {
   id: string | number
   message: string
+  messageEn?: string  // English version
+  messageTw?: string  // Twi version
   timestamp: string
   isUser: boolean
 }
@@ -23,8 +25,11 @@ function ChatPageContent() {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [reportId, setReportId] = useState<string | null>(null)
   const [userLanguage, setUserLanguage] = useState<'en' | 'tw'>('en')
+  const [showTranslation, setShowTranslation] = useState<{[key: string]: boolean}>({}) // Track which messages show translation
 
-  const formatMessage = (message: string) => {
+  const formatMessage = (message: string | undefined) => {
+    if (!message) return <p>No message</p>
+    
     return message.split('\n').map((line, index) => {
       if (line.startsWith('**') && line.endsWith('**')) {
         return <strong key={index} className="font-semibold">{line.slice(2, -2)}</strong>
@@ -89,47 +94,46 @@ function ChatPageContent() {
         setReportId(report.id)
         localStorage.setItem('current_report_id', report.id)
         
-        // Step 2: Create chat session with the report
-        const session = await createChatSession('report', report.id)
-        const sessionIdFromAPI = typeof session === 'string' ? session : session.id
-        if (!sessionIdFromAPI) {
-          throw new Error('Failed to create chat session: no session ID returned')
+        // The report contains the AI analysis directly
+        // Backend returns ai_diagnosis and ai_diagnosis_twi
+        const aiDiagnosisEn = (report as any).ai_diagnosis || report.reasoning
+        const aiDiagnosisTw = (report as any).ai_diagnosis_twi || report.reasoning
+        
+        const aiGreeting: Message = {
+          id: Date.now() + 1,
+          message: userLanguage === 'tw' ? aiDiagnosisTw : aiDiagnosisEn,
+          messageEn: aiDiagnosisEn,
+          messageTw: aiDiagnosisTw,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          isUser: false,
         }
-        setSessionId(sessionIdFromAPI)
-        localStorage.setItem('chat_session_id', sessionIdFromAPI)
+        setMessages([newMessage, aiGreeting])
         
-        // Step 3: Get session with AI's greeting
-        const sessionData = await getChatSessionById(sessionIdFromAPI)
-        
-        // Display AI greeting if available
-        if (sessionData.messages && sessionData.messages.length > 0) {
-          const greeting = sessionData.messages[0]
-          const aiGreeting: Message = {
-            id: Date.now() + 1,
-            message: userLanguage === 'tw' && greeting.message_text_twi 
-              ? greeting.message_text_twi 
-              : greeting.message_text,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            isUser: false,
+        // Step 2: Create chat session with the report for follow-up questions
+        try {
+          const session = await createChatSession('report', report.id)
+          const sessionIdFromAPI = typeof session === 'string' ? session : session.id
+          if (sessionIdFromAPI) {
+            setSessionId(sessionIdFromAPI)
+            localStorage.setItem('chat_session_id', sessionIdFromAPI)
           }
-          setMessages([newMessage, aiGreeting])
-        } else {
-          // Fallback greeting if no message from backend
-          const aiGreeting: Message = {
-            id: Date.now() + 1,
-            message: "How can I help you?",
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            isUser: false,
-          }
-          setMessages([newMessage, aiGreeting])
+        } catch (sessionError) {
+          console.error('Failed to create chat session, but report was created:', sessionError)
+          // Continue without session - user can still see the initial diagnosis
         }
       } else if (sessionId) {
         // Send message in existing chat session
         const response = await sendChatMessage(sessionId, message, userLanguage)
         
+        // Extract content from assistant_message (actual API response structure)
+        const aiResponseEn = response?.assistant_message?.content || 'Response received'
+        const aiResponseTw = response?.assistant_message?.content_twi || 'Response received'
+        
         const aiResponse: Message = {
           id: Date.now() + 1,
-          message: userLanguage === 'tw' ? response.ai_response.twi : response.ai_response.english,
+          message: userLanguage === 'tw' ? aiResponseTw : aiResponseEn,
+          messageEn: aiResponseEn,
+          messageTw: aiResponseTw,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           isUser: false,
         }
@@ -206,43 +210,67 @@ function ChatPageContent() {
             {/* Messages List */}
             <div className={`bg-white rounded-lg shadow-sm border border-gray-200 mb-6 ${isMobile ? 'p-4' : 'p-6'}`}>
               <div className={`space-y-4 overflow-y-auto ${isMobile ? 'max-h-[50vh]' : 'max-h-96'}`}>
-                {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex ${msg.isUser ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div className={`flex items-start space-x-3 ${isMobile ? 'max-w-[75%]' : 'max-w-xs lg:max-w-md'} ${msg.isUser ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                      {/* Avatar */}
-                      <div className={`flex-shrink-0 rounded-full flex items-center justify-center ${
-                        msg.isUser ? 'bg-blue-500' : 'bg-green-500'
-                      } ${isMobile ? 'w-6 h-6' : 'w-8 h-8'}`}>
-                        {msg.isUser ? (
-                          <span className={`text-white font-bold ${isMobile ? 'text-xs' : 'text-sm'}`}>U</span>
-                        ) : (
-                          <svg className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} text-white`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                          </svg>
-                        )}
-                      </div>
-                      
-                      {/* Message Bubble */}
-                      <div className={`rounded-2xl ${
-                        msg.isUser
-                          ? 'bg-blue-500 text-white rounded-br-md'
-                          : 'bg-gray-50 text-gray-900 border border-gray-200 rounded-bl-md'
-                      } ${isMobile ? 'px-3 py-2 text-sm' : 'px-4 py-3'}`}>
-                        <div className="prose prose-sm max-w-none">
-                          {formatMessage(msg.message)}
+                {messages.map((msg) => {
+                  const isTranslationShown = showTranslation[msg.id] || false
+                  const currentMessage = !msg.isUser && isTranslationShown
+                    ? (userLanguage === 'en' ? msg.messageTw : msg.messageEn) // Show opposite language
+                    : msg.message // Show default language
+                  
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`flex ${msg.isUser ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div className={`flex items-start space-x-3 ${isMobile ? 'max-w-[75%]' : 'max-w-xs lg:max-w-md'} ${msg.isUser ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                        {/* Avatar */}
+                        <div className={`flex-shrink-0 rounded-full flex items-center justify-center ${
+                          msg.isUser ? 'bg-blue-500' : 'bg-green-500'
+                        } ${isMobile ? 'w-6 h-6' : 'w-8 h-8'}`}>
+                          {msg.isUser ? (
+                            <span className={`text-white font-bold ${isMobile ? 'text-xs' : 'text-sm'}`}>U</span>
+                          ) : (
+                            <svg className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} text-white`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                          )}
                         </div>
-                        <div className={`${isMobile ? 'text-[10px] mt-1' : 'text-xs mt-2'} ${
-                          msg.isUser ? 'text-blue-100' : 'text-gray-500'
-                        }`}>
-                          {msg.timestamp}
+                        
+                        {/* Message Bubble */}
+                        <div className={`rounded-2xl ${
+                          msg.isUser
+                            ? 'bg-blue-500 text-white rounded-br-md'
+                            : 'bg-gray-50 text-gray-900 border border-gray-200 rounded-bl-md'
+                        } ${isMobile ? 'px-3 py-2 text-sm' : 'px-4 py-3'}`}>
+                          <div className="prose prose-sm max-w-none">
+                            {formatMessage(currentMessage)}
+                          </div>
+                          
+                          {/* Translation Toggle - Only for AI messages with both languages */}
+                          {!msg.isUser && msg.messageEn && msg.messageTw && msg.messageEn !== msg.messageTw && (
+                            <button
+                              onClick={() => setShowTranslation(prev => ({
+                                ...prev,
+                                [msg.id]: !prev[msg.id]
+                              }))}
+                              className={`${isMobile ? 'text-[10px] mt-1' : 'text-xs mt-2'} text-green-600 hover:text-green-700 underline`}
+                            >
+                              {isTranslationShown 
+                                ? `Show ${userLanguage === 'en' ? 'English' : 'Twi'}`
+                                : `Show ${userLanguage === 'en' ? 'Twi' : 'English'} translation`
+                              }
+                            </button>
+                          )}
+                          
+                          <div className={`${isMobile ? 'text-[10px] mt-1' : 'text-xs mt-2'} ${
+                            msg.isUser ? 'text-blue-100' : 'text-gray-500'
+                          }`}>
+                            {msg.timestamp}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
 
                 {/* Typing Indicator */}
                 {isTyping && (

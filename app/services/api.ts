@@ -355,12 +355,15 @@ export async function getChatSession(reportId: string): Promise<{
 }
 
 export async function sendChatMessage(sessionId: string, message: string, language: 'en' | 'tw' = 'en'): Promise<{
-  message_id: string
-  ai_response: {
-    english: string
-    twi: string
+  session_id: string
+  user_message: any
+  assistant_message: {
+    id: string
+    content: string
+    content_twi: string
+    language: string
   }
-  suggested_followups: { english: string, twi: string }[]
+  suggested_questions?: string[]
 }> {
   const token = localStorage.getItem('access_token')
   const response = await fetch(`${API_BASE_URL}/chat/messages/send`, {
