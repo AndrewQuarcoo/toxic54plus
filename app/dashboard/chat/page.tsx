@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Dashboard from '@/components/Dashboard'
 import { PromptInputBox } from '@/components/ai-prompt-box'
 import { useIsMobile } from '@/app/hooks/use-mobile'
-import { submitReport, getChatSession, sendChatMessage, type ChatMessage as APIChatMessage } from '@/app/services/api'
+import { submitReport, createChatSession, getChatSessionById, sendChatMessage, type ChatMessage as APIChatMessage } from '@/app/services/api'
 import { useAuth } from '@/app/contexts/AuthContext'
 import ProtectedRoute from '@/app/components/ProtectedRoute'
 
@@ -47,11 +47,10 @@ function ChatPageContent() {
         setReportId(storedReportId)
         
         try {
-          const session = await getChatSession(storedReportId)
-          setSessionId(session.session_id)
+          const session = await getChatSessionById(storedSessionId)
           
           // Convert API messages to UI messages
-          const formattedMessages: Message[] = session.messages.map((msg, idx) => ({
+          const formattedMessages: Message[] = session.messages.map((msg: APIChatMessage, idx: number) => ({
             id: idx + 1,
             message: userLanguage === 'tw' && msg.message_text_twi ? msg.message_text_twi : msg.message_text,
             timestamp: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -83,23 +82,42 @@ function ChatPageContent() {
     setIsTyping(true)
     
     try {
-      // First message creates a report
+      // First message creates a report and chat session
       if (!sessionId && !reportId) {
-        // Create report from user's symptom message
+        // Step 1: Create report from user's symptom message
         const report = await submitReport(message, 'Ghana', userLanguage)
         setReportId(report.id)
-        setSessionId(report.chat_session_id || null)
         localStorage.setItem('current_report_id', report.id)
         
-        if (report.chat_session_id) {
-          localStorage.setItem('chat_session_id', report.chat_session_id)
-          
-          // Get initial AI greeting
-          const session = await getChatSession(report.id)
-          
+        // Step 2: Create chat session with the report
+        const session = await createChatSession('report', report.id)
+        const sessionIdFromAPI = typeof session === 'string' ? session : session.id
+        if (!sessionIdFromAPI) {
+          throw new Error('Failed to create chat session: no session ID returned')
+        }
+        setSessionId(sessionIdFromAPI)
+        localStorage.setItem('chat_session_id', sessionIdFromAPI)
+        
+        // Step 3: Get session with AI's greeting
+        const sessionData = await getChatSessionById(sessionIdFromAPI)
+        
+        // Display AI greeting if available
+        if (sessionData.messages && sessionData.messages.length > 0) {
+          const greeting = sessionData.messages[0]
           const aiGreeting: Message = {
             id: Date.now() + 1,
-            message: session.messages[0] ? (userLanguage === 'tw' && session.messages[0].message_text_twi ? session.messages[0].message_text_twi : session.messages[0].message_text) : "How can I help you?",
+            message: userLanguage === 'tw' && greeting.message_text_twi 
+              ? greeting.message_text_twi 
+              : greeting.message_text,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            isUser: false,
+          }
+          setMessages([newMessage, aiGreeting])
+        } else {
+          // Fallback greeting if no message from backend
+          const aiGreeting: Message = {
+            id: Date.now() + 1,
+            message: "How can I help you?",
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             isUser: false,
           }

@@ -351,6 +351,27 @@ export async function getChatHistory(sessionId: string): Promise<ChatMessage[]> 
   return await response.json()
 }
 
+// Get chat session by session ID (for accessing sessions directly)
+export async function getChatSessionById(sessionId: string): Promise<{
+  session_id: string
+  messages: ChatMessage[]
+  suggested_questions?: string[]
+}> {
+  const token = localStorage.getItem('access_token')
+  const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  })
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch chat session')
+  }
+  
+  return await response.json()
+}
+
 // Alerts
 export async function getAllAlerts(): Promise<Alert[]> {
   const token = localStorage.getItem('access_token')
