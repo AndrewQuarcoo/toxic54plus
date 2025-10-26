@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react'
 import DoctorDashboard from '@/components/DoctorDashboard'
 import { getAllReports, type Report } from '@/app/services/api'
+import ProtectedRoute from '@/app/components/ProtectedRoute'
 
-export default function PatientsPage() {
+function PatientsPageContent() {
   const [reports, setReports] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -153,5 +154,13 @@ export default function PatientsPage() {
         </div>
       </div>
     </DoctorDashboard>
+  )
+}
+
+export default function PatientsPage() {
+  return (
+    <ProtectedRoute allowedRoles={['health_admin', 'super_admin']} redirectPath="/doctor-login">
+      <PatientsPageContent />
+    </ProtectedRoute>
   )
 }

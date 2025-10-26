@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react'
 import EPADashboard from '@/components/EPADashboard'
 import { getAllReports, type Report } from '@/app/services/api'
+import ProtectedRoute from '@/app/components/ProtectedRoute'
 
-export default function ReportsPage() {
+function ReportsPageContent() {
   const [reports, setReports] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -199,5 +200,13 @@ export default function ReportsPage() {
         </div>
       </div>
     </EPADashboard>
+  )
+}
+
+export default function ReportsPage() {
+  return (
+    <ProtectedRoute allowedRoles={['epa_admin', 'super_admin']} redirectPath="/epa-login">
+      <ReportsPageContent />
+    </ProtectedRoute>
   )
 }

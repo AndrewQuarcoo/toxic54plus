@@ -1,8 +1,9 @@
 'use client'
 
 import DoctorDashboard from '@/components/DoctorDashboard'
+import ProtectedRoute from '@/app/components/ProtectedRoute'
 
-export default function ReportsPage() {
+function ReportsPageContent() {
   const reports = [
     {
       id: 1,
@@ -160,5 +161,13 @@ export default function ReportsPage() {
         </div>
       </div>
     </DoctorDashboard>
+  )
+}
+
+export default function ReportsPage() {
+  return (
+    <ProtectedRoute allowedRoles={['health_admin', 'super_admin']} redirectPath="/doctor-login">
+      <ReportsPageContent />
+    </ProtectedRoute>
   )
 }

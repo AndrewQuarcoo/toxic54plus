@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import EPADashboard from '@/components/EPADashboard'
+import ProtectedRoute from '@/app/components/ProtectedRoute'
 
-export default function DetectionPage() {
+function DetectionPageContent() {
   const [activeTab, setActiveTab] = useState('upload')
 
   const recentDetections = [
@@ -246,5 +247,13 @@ export default function DetectionPage() {
         </div>
       </div>
     </EPADashboard>
+  )
+}
+
+export default function DetectionPage() {
+  return (
+    <ProtectedRoute allowedRoles={['epa_admin', 'super_admin']} redirectPath="/epa-login">
+      <DetectionPageContent />
+    </ProtectedRoute>
   )
 }

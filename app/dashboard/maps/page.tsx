@@ -5,8 +5,9 @@ import GalamseyDetectionMap from '@/components/GalamseyDetectionMap'
 import { galamseyDetectionService, GalamseySite, DetectionResult } from '@/services/galamseyDetectionService'
 import { useState, useEffect } from 'react'
 import { useIsMobile } from '@/app/hooks/use-mobile'
+import ProtectedRoute from '@/app/components/ProtectedRoute'
 
-export default function MapsPage() {
+function MapsPageContent() {
   const isMobile = useIsMobile()
   const [detectionResult, setDetectionResult] = useState<DetectionResult | null>(null)
   const [loading, setLoading] = useState(true)
@@ -316,5 +317,13 @@ export default function MapsPage() {
         )}
       </div>
     </Dashboard>
+  )
+}
+
+export default function MapsPage() {
+  return (
+    <ProtectedRoute allowedRoles={['user', 'epa_admin', 'health_admin', 'super_admin']}>
+      <MapsPageContent />
+    </ProtectedRoute>
   )
 }

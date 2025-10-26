@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import DoctorDashboard from '@/components/DoctorDashboard'
+import ProtectedRoute from '@/app/components/ProtectedRoute'
 
-export default function AnalysisPage() {
+function AnalysisPageContent() {
   const [activeTab, setActiveTab] = useState('overview')
 
   const recentAnalyses = [
@@ -247,5 +248,13 @@ export default function AnalysisPage() {
         </div>
       </div>
     </DoctorDashboard>
+  )
+}
+
+export default function AnalysisPage() {
+  return (
+    <ProtectedRoute allowedRoles={['health_admin', 'super_admin']} redirectPath="/doctor-login">
+      <AnalysisPageContent />
+    </ProtectedRoute>
   )
 }

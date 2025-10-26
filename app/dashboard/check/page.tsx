@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import Dashboard from '@/components/Dashboard'
 import { useIsMobile } from '@/app/hooks/use-mobile'
+import ProtectedRoute from '@/app/components/ProtectedRoute'
 
-export default function CheckPage() {
+function CheckPageContent() {
   const isMobile = useIsMobile()
   const [checkData, setCheckData] = useState({
     heartRate: '',
@@ -213,5 +214,13 @@ export default function CheckPage() {
         </div>
       </div>
     </Dashboard>
+  )
+}
+
+export default function CheckPage() {
+  return (
+    <ProtectedRoute allowedRoles={['user', 'epa_admin', 'health_admin', 'super_admin']}>
+      <CheckPageContent />
+    </ProtectedRoute>
   )
 }

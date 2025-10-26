@@ -24,12 +24,20 @@ function DashboardPageContent() {
     fileInputRef.current?.click()
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      console.log('File selected:', file.name)
-      // Handle file upload here
-      setShowCaptureModal(false)
+      try {
+        // Import API function dynamically to avoid issues
+        const { uploadImage } = await import('@/app/services/api')
+        const image = await uploadImage(file, 'Health check evidence')
+        console.log('Image uploaded successfully:', image)
+        alert('Image uploaded successfully!')
+        setShowCaptureModal(false)
+      } catch (error) {
+        console.error('Failed to upload image:', error)
+        alert('Failed to upload image. Please try again.')
+      }
     }
   }
 

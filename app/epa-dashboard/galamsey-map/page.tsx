@@ -1,8 +1,9 @@
 'use client'
 
 import EPADashboard from '@/components/EPADashboard'
+import ProtectedRoute from '@/app/components/ProtectedRoute'
 
-export default function GalamseyMapPage() {
+function GalamseyMapPageContent() {
   const detectionSites = [
     {
       id: 1,
@@ -204,5 +205,13 @@ export default function GalamseyMapPage() {
         </div>
       </div>
     </EPADashboard>
+  )
+}
+
+export default function GalamseyMapPage() {
+  return (
+    <ProtectedRoute allowedRoles={['epa_admin', 'super_admin']} redirectPath="/epa-login">
+      <GalamseyMapPageContent />
+    </ProtectedRoute>
   )
 }

@@ -311,3 +311,11 @@ export default function ResultsPage() {
     </Dashboard>
   )
 }
+
+export default function ResultsPage() {
+  return (
+    <ProtectedRoute allowedRoles={['user', 'epa_admin', 'health_admin', 'super_admin']}>
+      <ResultsPageContent />
+    </ProtectedRoute>
+  )
+}

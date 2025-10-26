@@ -1,21 +1,28 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Dashboard from '@/components/Dashboard'
 import { PromptInputBox } from '@/components/ai-prompt-box'
 import { useIsMobile } from '@/app/hooks/use-mobile'
+import { submitReport, getChatSession, sendChatMessage, type ChatMessage as APIChatMessage } from '@/app/services/api'
+import { useAuth } from '@/app/contexts/AuthContext'
+import ProtectedRoute from '@/app/components/ProtectedRoute'
 
 interface Message {
-  id: number
+  id: string | number
   message: string
   timestamp: string
   isUser: boolean
 }
 
-export default function ChatPage() {
+function ChatPageContent() {
   const isMobile = useIsMobile()
+  const { user } = useAuth()
   const [messages, setMessages] = useState<Message[]>([])
   const [isTyping, setIsTyping] = useState(false)
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [reportId, setReportId] = useState<string | null>(null)
+  const [userLanguage, setUserLanguage] = useState<'en' | 'tw'>('en')
 
   const formatMessage = (message: string) => {
     return message.split('\n').map((line, index) => {
@@ -29,11 +36,44 @@ export default function ChatPage() {
     })
   }
 
-  const handleSendMessage = (message: string, files?: File[]) => {
+  useEffect(() => {
+    // Load existing chat session if available
+    const loadChatSession = async () => {
+      const storedSessionId = localStorage.getItem('chat_session_id')
+      const storedReportId = localStorage.getItem('current_report_id')
+      
+      if (storedSessionId && storedReportId) {
+        setSessionId(storedSessionId)
+        setReportId(storedReportId)
+        
+        try {
+          const session = await getChatSession(storedReportId)
+          setSessionId(session.session_id)
+          
+          // Convert API messages to UI messages
+          const formattedMessages: Message[] = session.messages.map((msg, idx) => ({
+            id: idx + 1,
+            message: userLanguage === 'tw' && msg.message_text_twi ? msg.message_text_twi : msg.message_text,
+            timestamp: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            isUser: msg.sender === 'user'
+          }))
+          
+          setMessages(formattedMessages)
+        } catch (error) {
+          console.error('Failed to load chat session:', error)
+        }
+      }
+    }
+    
+    loadChatSession()
+  }, [userLanguage])
+
+  const handleSendMessage = async (message: string, files?: File[]) => {
     if (!message.trim() && (!files || files.length === 0)) return
 
+    // Add user message to UI
     const newMessage: Message = {
-      id: messages.length + 1,
+      id: Date.now(),
       message: message,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       isUser: true,
@@ -41,16 +81,54 @@ export default function ChatPage() {
     setMessages((prev) => [...prev, newMessage])
 
     setIsTyping(true)
-    setTimeout(() => {
-      const aiResponse: Message = {
-        id: messages.length + 2,
-        message: "I'm an AI Health Assistant. How can I help you today?",
+    
+    try {
+      // First message creates a report
+      if (!sessionId && !reportId) {
+        // Create report from user's symptom message
+        const report = await submitReport(message, 'Ghana')
+        setReportId(report.id)
+        setSessionId(report.chat_session_id || null)
+        localStorage.setItem('current_report_id', report.id)
+        
+        if (report.chat_session_id) {
+          localStorage.setItem('chat_session_id', report.chat_session_id)
+          
+          // Get initial AI greeting
+          const session = await getChatSession(report.id)
+          
+          const aiGreeting: Message = {
+            id: Date.now() + 1,
+            message: session.messages[0] ? (userLanguage === 'tw' && session.messages[0].message_text_twi ? session.messages[0].message_text_twi : session.messages[0].message_text) : "How can I help you?",
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            isUser: false,
+          }
+          setMessages([newMessage, aiGreeting])
+        }
+      } else if (sessionId) {
+        // Send message in existing chat session
+        const response = await sendChatMessage(sessionId, message, userLanguage)
+        
+        const aiResponse: Message = {
+          id: Date.now() + 1,
+          message: userLanguage === 'tw' ? response.ai_response.twi : response.ai_response.english,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          isUser: false,
+        }
+        setMessages((prev) => [...prev, aiResponse])
+      }
+    } catch (error) {
+      console.error('Failed to send message:', error)
+      const errorMessage: Message = {
+        id: Date.now() + 1,
+        message: 'Sorry, I encountered an error. Please try again.',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         isUser: false,
       }
-      setMessages((prev) => [...prev, aiResponse])
+      setMessages((prev) => [...prev, errorMessage])
+    } finally {
       setIsTyping(false)
-    }, 1500)
+    }
   }
 
   return (
@@ -159,5 +237,13 @@ export default function ChatPage() {
         )}
       </div>
     </Dashboard>
+  )
+}
+
+export default function ChatPage() {
+  return (
+    <ProtectedRoute allowedRoles={['user', 'epa_admin', 'health_admin', 'super_admin']}>
+      <ChatPageContent />
+    </ProtectedRoute>
   )
 }
