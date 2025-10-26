@@ -17,8 +17,7 @@ export default function EPADashboard({ children }: EPADashboardProps) {
 
   const navigation = [
     { name: 'Home', href: '/epa-dashboard', icon: '🏠' },
-    { name: 'Galamsey Map', href: '/epa-dashboard/galamsey-map', icon: '🗺️' },
-    { name: 'Detection', href: '/epa-dashboard/detection', icon: '🔍' },
+    { name: 'Map', href: '/epa-dashboard/galamsey-map', icon: '🗺️' },
     { name: 'Reports', href: '/epa-dashboard/reports', icon: '📊' },
   ]
 
@@ -91,14 +90,9 @@ export default function EPADashboard({ children }: EPADashboardProps) {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                         </svg>
                       )}
-                      {item.name === 'Galamsey Map' && (
+                      {item.name === 'Map' && (
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                        </svg>
-                      )}
-                      {item.name === 'Detection' && (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                       )}
                       {item.name === 'Reports' && (

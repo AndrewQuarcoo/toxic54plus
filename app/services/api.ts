@@ -231,7 +231,20 @@ export async function getAllReports(): Promise<Report[]> {
     throw new Error('Failed to fetch reports')
   }
   
-  return await response.json()
+  const data = await response.json()
+  
+  // Handle both array response and paginated response
+  if (Array.isArray(data)) {
+    return data
+  }
+  
+  // Handle paginated response with reports array
+  if (data.reports && Array.isArray(data.reports)) {
+    return data.reports
+  }
+  
+  // Handle other possible response formats
+  return data
 }
 
 // New function to get all users/patients from reports

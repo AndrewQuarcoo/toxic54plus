@@ -1,51 +1,94 @@
 'use client'
 
+import { useState } from 'react'
 import EPADashboard from '@/components/EPADashboard'
 import ProtectedRoute from '@/app/components/ProtectedRoute'
+import GalamseyDetectionMap from '@/components/GalamseyDetectionMap'
 
 function GalamseyMapPageContent() {
+  const [selectedRegion, setSelectedRegion] = useState('all')
+  
   const detectionSites = [
     {
-      id: 1,
-      location: 'Western Region, Prestea',
-      coordinates: '5.4345° N, 2.1447° W',
-      date: '2024-01-15',
-      status: 'Active',
-      severity: 'High'
+      id: '1',
+      name: 'Prestea Site',
+      lat: 5.4345,
+      lng: -2.1447,
+      status: 'active' as const,
+      size: 'medium' as const,
+      lastUpdated: '2024-01-15',
+      region: 'Western',
+      confidence: 0.87,
+      area: 12.5,
+      degradationLevel: 'high' as const,
+      detectionMethod: 'sentinel-2' as const
     },
     {
-      id: 2,
-      location: 'Ashanti Region, Obuasi',
-      coordinates: '6.2048° N, 1.6679° W',
-      date: '2024-01-14',
-      status: 'Active',
-      severity: 'Critical'
+      id: '2',
+      name: 'Obuasi Site',
+      lat: 6.2048,
+      lng: -1.6679,
+      status: 'active' as const,
+      size: 'large' as const,
+      lastUpdated: '2024-01-14',
+      region: 'Ashanti',
+      confidence: 0.92,
+      area: 35.8,
+      degradationLevel: 'high' as const,
+      detectionMethod: 'planet-nicfi' as const
     },
     {
-      id: 3,
-      location: 'Eastern Region, Kibi',
-      coordinates: '5.9333° N, 0.5167° W',
-      date: '2024-01-13',
-      status: 'Investigating',
-      severity: 'Moderate'
+      id: '3',
+      name: 'Kibi Site',
+      lat: 5.9333,
+      lng: -0.5167,
+      status: 'inactive' as const,
+      size: 'small' as const,
+      lastUpdated: '2024-01-13',
+      region: 'Eastern',
+      confidence: 0.75,
+      area: 8.3,
+      degradationLevel: 'medium' as const,
+      detectionMethod: 'sentinel-1' as const
     },
     {
-      id: 4,
-      location: 'Central Region, Dunkwa',
-      coordinates: '5.9667° N, 1.7833° W',
-      date: '2024-01-12',
-      status: 'Contained',
-      severity: 'Low'
+      id: '4',
+      name: 'Dunkwa Site',
+      lat: 5.9667,
+      lng: -1.7833,
+      status: 'rehabilitated' as const,
+      size: 'medium' as const,
+      lastUpdated: '2024-01-12',
+      region: 'Central',
+      confidence: 0.68,
+      area: 15.2,
+      degradationLevel: 'low' as const,
+      detectionMethod: 'unet-deep-learning' as const
     },
     {
-      id: 5,
-      location: 'Upper West Region, Wa',
-      coordinates: '10.0600° N, 2.5019° W',
-      date: '2024-01-11',
-      status: 'Active',
-      severity: 'High'
+      id: '5',
+      name: 'Wa Site',
+      lat: 10.0600,
+      lng: -2.5019,
+      status: 'active' as const,
+      size: 'large' as const,
+      lastUpdated: '2024-01-11',
+      region: 'Upper West',
+      confidence: 0.91,
+      area: 42.6,
+      degradationLevel: 'high' as const,
+      detectionMethod: 'sentinel-2' as const
     },
   ]
+
+  const tableData = detectionSites.map((site, index) => ({
+    id: index + 1,
+    location: `${site.region} Region, ${site.name}`,
+    coordinates: `${site.lat.toFixed(4)}° N, ${site.lng.toFixed(4)}° W`,
+    date: site.lastUpdated,
+    status: site.status === 'active' ? 'Active' : site.status === 'inactive' ? 'Investigating' : 'Contained',
+    severity: site.degradationLevel === 'high' ? 'Critical' : site.degradationLevel === 'medium' ? 'High' : 'Moderate'
+  }))
 
   const getStatusBadge = (status: string) => {
     const colors = {
@@ -74,27 +117,26 @@ function GalamseyMapPageContent() {
     )
   }
 
+  const handleSiteClick = (site: typeof detectionSites[0]) => {
+    console.log('Site clicked:', site)
+    // You can add more functionality here, like opening a modal or navigating
+  }
+
   return (
     <EPADashboard>
       <div className="p-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-black mb-2">Galamsey Detection Map</h1>
-          <p className="text-gray-600">Monitor illegal mining activities across Ghana</p>
+          <h1 className="text-3xl font-bold text-black mb-2">Regional Map</h1>
+          <p className="text-gray-600">Monitor environmental activities across Ghana</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-2 bg-white rounded-lg shadow">
-            <div className="p-6">
-              <div className="bg-gray-100 rounded-lg h-96 flex items-center justify-center">
-                <div className="text-center">
-                  <svg className="w-24 h-24 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                  </svg>
-                  <p className="text-gray-600 font-medium">Interactive Map</p>
-                  <p className="text-sm text-gray-500">Map integration will be displayed here</p>
-                </div>
-              </div>
-            </div>
+          <div className="lg:col-span-2 bg-white rounded-lg shadow p-6">
+            <GalamseyDetectionMap 
+              sites={detectionSites} 
+              selectedRegion={selectedRegion}
+              onSiteClick={handleSiteClick}
+            />
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
@@ -145,7 +187,7 @@ function GalamseyMapPageContent() {
 
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">Recent Detections</h3>
+            <h3 className="text-lg font-medium text-gray-900">Recent Activities</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -158,7 +200,7 @@ function GalamseyMapPageContent() {
                     Coordinates
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date Detected
+                    Date
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Severity
@@ -172,7 +214,7 @@ function GalamseyMapPageContent() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {detectionSites.map((site) => (
+                {tableData.map((site) => (
                   <tr key={site.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{site.location}</div>

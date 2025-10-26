@@ -111,7 +111,7 @@ const LandingPage = () => {
           <div 
             className="w-full h-full bg-cover bg-center bg-no-repeat"
             style={{
-              backgroundImage: 'url(/herosectionimage.jpeg)'
+              backgroundImage: 'url(/cala.jpg)'
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black"></div>
@@ -120,13 +120,13 @@ const LandingPage = () => {
         <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 text-center">
           <h2 className={`font-bold uppercase leading-tight mb-4 tracking-tight ${
             isMobile ? 'text-2xl sm:text-3xl' : 'text-4xl md:text-5xl'
-          }`} style={{ WebkitTextStroke: '2px rgba(34, 197, 94, 0.3)', color: 'white' }}>
+          }`} style={{ WebkitTextStroke: '2px rgba(34, 197, 94, 0.3)', color: 'black' }}>
             <span className="block">AI-Powered Health &amp; Environmental Monitoring</span>
           </h2>
           
-          <p className={`mb-8 max-w-2xl mx-auto text-white ${
+          <p className={`mb-8 max-w-2xl mx-auto text-black ${
             isMobile ? 'text-base' : 'text-lg'
-          }`} style={{ WebkitTextStroke: '1px black' }}>
+          }`}>
             Detecting Mercury and Chemical Poisoning Through AI, Community Data, and Environmental Sensing
           </p>
           
