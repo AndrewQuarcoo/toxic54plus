@@ -108,19 +108,25 @@ const LandingPage = () => {
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black">
         {/* Background Image with Gradient Overlay */}
         <div className="absolute inset-0 z-0">
-          <div className="w-full h-full bg-gradient-to-b from-transparent via-transparent to-black"></div>
+          <div 
+            className="w-full h-full bg-cover bg-center bg-no-repeat"
+            style={{
+              backgroundImage: 'url(/herosectionimage.jpeg)'
+            }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black"></div>
         </div>
         
         <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 text-center">
           <h2 className={`font-bold uppercase leading-tight mb-4 tracking-tight ${
             isMobile ? 'text-2xl sm:text-3xl' : 'text-4xl md:text-5xl'
-          }`}>
+          }`} style={{ WebkitTextStroke: '2px rgba(34, 197, 94, 0.3)', color: 'white' }}>
             <span className="block">AI-Powered Health &amp; Environmental Monitoring</span>
           </h2>
           
-          <p className={`text-white mb-8 max-w-2xl mx-auto ${
+          <p className={`mb-8 max-w-2xl mx-auto text-white ${
             isMobile ? 'text-base' : 'text-lg'
-          }`}>
+          }`} style={{ WebkitTextStroke: '1px black' }}>
             Detecting Mercury and Chemical Poisoning Through AI, Community Data, and Environmental Sensing
           </p>
           

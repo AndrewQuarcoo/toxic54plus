@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import Dashboard from '@/components/Dashboard'
 import ProtectedRoute from '../components/ProtectedRoute'
 
@@ -10,6 +11,8 @@ function DashboardPageContent() {
   const [showCaptureModal, setShowCaptureModal] = useState(false)
   const [isLiveCamera, setIsLiveCamera] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -25,32 +28,65 @@ function DashboardPageContent() {
     fileInputRef.current?.click()
   }
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      try {
-        setIsProcessing(true)
-        setShowCaptureModal(false)
-        
-        // Import API function dynamically to avoid issues
-        const { uploadImage, createChatSession } = await import('@/app/services/api')
-        
-        // Upload image
-        const image = await uploadImage(file, 'Health check evidence')
-        console.log('Image uploaded successfully:', image)
-        
-        // Create chat session with the image ID
-        const session = await createChatSession('image', image.id)
-        console.log('Chat session created:', session)
-        
-        // Navigate to chat with session ID
-        router.push(`/dashboard/chat?sessionId=${session.id}`)
-        
-      } catch (error) {
-        console.error('Failed to process image:', error)
-        alert('Failed to process image. Please try again.')
-        setIsProcessing(false)
+      // Create preview URL
+      const url = URL.createObjectURL(file)
+      setPreviewUrl(url)
+      setSelectedFile(file)
+      setShowCaptureModal(false)
+    }
+  }
+
+  const handleConfirmUpload = async () => {
+    if (!selectedFile) return
+    
+    try {
+      setIsProcessing(true)
+      
+      // Import API function dynamically to avoid issues
+      const { uploadImage, createChatSession } = await import('@/app/services/api')
+      
+      // Upload image
+      const image = await uploadImage(selectedFile, 'Health check evidence')
+      console.log('Image uploaded successfully:', image)
+      
+      // Create chat session with the image ID
+      const session = await createChatSession('image', image.id)
+      console.log('Chat session created:', session)
+      
+      // Show success toast
+      toast.success('Image uploaded successfully!', {
+        description: 'Redirecting to chat...',
+      })
+      
+      // Clean up preview URL
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
       }
+      
+      // Navigate to chat with session ID
+      router.push(`/dashboard/chat?sessionId=${session.id}`)
+      
+    } catch (error) {
+      console.error('Failed to process image:', error)
+      toast.error('Failed to process image', {
+        description: 'Please try again or select a different image.',
+      })
+      setIsProcessing(false)
+    }
+  }
+
+  const handleCancelPreview = () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl)
+    }
+    setPreviewUrl(null)
+    setSelectedFile(null)
+    // Reset file input so user can select the same file again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
     }
   }
 
@@ -63,7 +99,9 @@ function DashboardPageContent() {
       }
     } catch (error) {
       console.error('Error accessing camera:', error)
-      alert('Unable to access camera. Please check permissions.')
+      toast.error('Camera access denied', {
+        description: 'Please check your camera permissions and try again.',
+      })
     }
   }
 
@@ -81,6 +119,19 @@ function DashboardPageContent() {
     setShowCaptureModal(false)
     setIsLiveCamera(false)
   }
+
+  const closePreviewModal = () => {
+    handleCancelPreview()
+  }
+
+  // Cleanup preview URL when component unmounts
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [previewUrl])
 
   return (
     <Dashboard>
@@ -121,6 +172,60 @@ function DashboardPageContent() {
             </div>
           </div>
         </div>
+
+        {/* Image Preview Modal */}
+        {previewUrl && !isProcessing && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-2xl mx-auto max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-black">Review Your Image</h3>
+                <button
+                  onClick={closePreviewModal}
+                  className="text-gray-400 hover:text-black"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Image Preview */}
+                <div className="relative w-full">
+                  <img
+                    src={previewUrl}
+                    alt="Preview"
+                    className="w-full h-auto rounded-lg object-contain max-h-[60vh]"
+                  />
+                </div>
+
+                {/* File Info */}
+                {selectedFile && (
+                  <div className="text-sm text-gray-600">
+                    <p><span className="font-medium">File:</span> {selectedFile.name}</p>
+                    <p><span className="font-medium">Size:</span> {(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleCancelPreview}
+                    className="flex-1 bg-gray-200 text-gray-800 py-3 px-6 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirmUpload}
+                    className="flex-1 bg-green-500 text-white py-3 px-6 rounded-lg font-medium hover:bg-green-600 transition-colors"
+                  >
+                    Upload & Process
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Processing Indicator */}
         {isProcessing && (

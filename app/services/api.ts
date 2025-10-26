@@ -140,8 +140,12 @@ export async function register(formData: {
 }
 
 export async function getCurrentUser(): Promise<User> {
+  const token = localStorage.getItem('access_token')
   const response = await fetch(`${API_BASE_URL}/auth/me`, {
-    headers: getAuthHeaders()
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
   })
   
   if (!response.ok) {
@@ -159,9 +163,13 @@ export async function submitReport(
   latitude?: number, 
   longitude?: number
 ): Promise<Report> {
+  const token = localStorage.getItem('access_token')
   const response = await fetch(`${API_BASE_URL}/reports/submit`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
     body: JSON.stringify({
       original_input,
       input_language,
@@ -182,8 +190,12 @@ export async function submitReport(
 }
 
 export async function getUserReports(): Promise<Report[]> {
-  const response = await fetch(`${API_BASE_URL}/reports/user/me`, {
-    headers: getAuthHeaders()
+  const token = localStorage.getItem('access_token')
+  const response = await fetch(`${API_BASE_URL}/reports/user`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
   })
   
   if (!response.ok) {
@@ -194,8 +206,12 @@ export async function getUserReports(): Promise<Report[]> {
 }
 
 export async function getAllReports(): Promise<Report[]> {
+  const token = localStorage.getItem('access_token')
   const response = await fetch(`${API_BASE_URL}/reports/all`, {
-    headers: getAuthHeaders()
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
   })
   
   if (!response.ok) {
@@ -206,8 +222,12 @@ export async function getAllReports(): Promise<Report[]> {
 }
 
 export async function getReport(reportId: string): Promise<Report> {
+  const token = localStorage.getItem('access_token')
   const response = await fetch(`${API_BASE_URL}/reports/${reportId}`, {
-    headers: getAuthHeaders()
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
   })
   
   if (!response.ok) {
@@ -243,9 +263,13 @@ export async function uploadImage(file: File, description?: string): Promise<Ima
 
 // Chatbot (Connected to Chat UI)
 export async function createChatSession(triggerType: 'report' | 'image', triggerId: string): Promise<ChatSession> {
-  const response = await fetch(`${API_BASE_URL}/chatbot/sessions/create`, {
+  const token = localStorage.getItem('access_token')
+  const response = await fetch(`${API_BASE_URL}/chat/sessions/create`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
     body: JSON.stringify({
       trigger_type: triggerType,
       trigger_id: triggerId,
@@ -266,8 +290,12 @@ export async function getChatSession(reportId: string): Promise<{
   messages: ChatMessage[]
   suggested_questions: { english: string, twi: string }[]
 }> {
-  const response = await fetch(`${API_BASE_URL}/chatbot/sessions/report/${reportId}`, {
-    headers: getAuthHeaders()
+  const token = localStorage.getItem('access_token')
+  const response = await fetch(`${API_BASE_URL}/chat/sessions/report/${reportId}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
   })
   
   if (!response.ok) {
@@ -285,12 +313,16 @@ export async function sendChatMessage(sessionId: string, message: string, langua
   }
   suggested_followups: { english: string, twi: string }[]
 }> {
-  const response = await fetch(`${API_BASE_URL}/chatbot/send`, {
+  const token = localStorage.getItem('access_token')
+  const response = await fetch(`${API_BASE_URL}/chat/messages/send`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
     body: JSON.stringify({
       session_id: sessionId,
-      message,
+      content: message,
       language
     })
   })
@@ -304,8 +336,12 @@ export async function sendChatMessage(sessionId: string, message: string, langua
 }
 
 export async function getChatHistory(sessionId: string): Promise<ChatMessage[]> {
-  const response = await fetch(`${API_BASE_URL}/chatbot/sessions/${sessionId}/history`, {
-    headers: getAuthHeaders()
+  const token = localStorage.getItem('access_token')
+  const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
   })
   
   if (!response.ok) {
@@ -317,8 +353,12 @@ export async function getChatHistory(sessionId: string): Promise<ChatMessage[]> 
 
 // Alerts
 export async function getAllAlerts(): Promise<Alert[]> {
-  const response = await fetch(`${API_BASE_URL}/alerts/all`, {
-    headers: getAuthHeaders()
+  const token = localStorage.getItem('access_token')
+  const response = await fetch(`${API_BASE_URL}/alerts/active`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
   })
   
   if (!response.ok) {
@@ -330,8 +370,12 @@ export async function getAllAlerts(): Promise<Alert[]> {
 
 // Dashboard
 export async function getDashboardSummary(): Promise<any> {
+  const token = localStorage.getItem('access_token')
   const response = await fetch(`${API_BASE_URL}/dashboard/summary`, {
-    headers: getAuthHeaders()
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
   })
   
   if (!response.ok) {
@@ -342,8 +386,12 @@ export async function getDashboardSummary(): Promise<any> {
 }
 
 export async function getHeatmapData(): Promise<any> {
+  const token = localStorage.getItem('access_token')
   const response = await fetch(`${API_BASE_URL}/dashboard/heatmap`, {
-    headers: getAuthHeaders()
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
   })
   
   if (!response.ok) {
