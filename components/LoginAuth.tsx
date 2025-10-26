@@ -2,9 +2,11 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useIsMobile } from '@/app/hooks/use-mobile'
 
 export default function LoginAuth() {
+  const router = useRouter()
   const isMobile = useIsMobile()
   const [formData, setFormData] = useState({
     email: '',
@@ -23,7 +25,9 @@ export default function LoginAuth() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     console.log('Login form submitted:', formData)
-    // Handle form submission here
+    // Handle authentication logic here
+    // For now, redirect to dashboard
+    router.push('/dashboard')
   }
 
   return (
