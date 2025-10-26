@@ -1,7 +1,7 @@
 // API Service based on ARCHITECTURE.md
 // Maps backend API endpoints to frontend usage
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://toxitrace-backendx.onrender.com'
 
 export interface User {
   id: string  // UUID

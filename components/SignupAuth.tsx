@@ -3,15 +3,19 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useIsMobile } from '@/app/hooks/use-mobile'
+import { useAuth } from '@/app/contexts/AuthContext'
 
 export default function SignupAuth() {
   const isMobile = useIsMobile()
+  const { register } = useAuth()
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     password: ''
   })
+  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target
@@ -21,12 +25,22 @@ export default function SignupAuth() {
     }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('Signup form submitted:', formData)
-    // Handle form submission here
-    // Redirect to onboarding after successful signup
-    window.location.href = '/onboarding'
+    setError('')
+    setIsLoading(true)
+    
+    try {
+      await register({
+        email: formData.email,
+        password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName
+      })
+    } catch (err: any) {
+      setError(err.message || 'Registration failed. Please try again.')
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -61,6 +75,13 @@ export default function SignupAuth() {
               Fill in the details below to get started
             </p>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className={isMobile ? 'space-y-4' : 'space-y-6'}>
@@ -144,11 +165,14 @@ export default function SignupAuth() {
             {/* Submit Button */}
             <button
               type="submit"
-              className={`w-full bg-black text-white rounded-full font-medium hover:bg-green-500 hover:text-black transition-all duration-300 shadow-lg relative overflow-hidden group focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
+              disabled={isLoading}
+              className={`w-full bg-black text-white rounded-full font-medium hover:bg-green-500 hover:text-black transition-all duration-300 shadow-lg relative overflow-hidden group focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 ${
                 isMobile ? 'py-2.5 text-sm' : 'py-3'
               }`}
             >
-              <span className="relative z-10">Create Account</span>
+              <span className="relative z-10">
+                {isLoading ? 'Creating Account...' : 'Create Account'}
+              </span>
               <div className="absolute inset-0 bg-green-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
             </button>
           </form>

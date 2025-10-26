@@ -3,8 +3,9 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Dashboard from '@/components/Dashboard'
+import ProtectedRoute from '../components/ProtectedRoute'
 
-export default function DashboardPage() {
+function DashboardPageContent() {
   const router = useRouter()
   const [showCaptureModal, setShowCaptureModal] = useState(false)
   const [isLiveCamera, setIsLiveCamera] = useState(false)
@@ -193,5 +194,13 @@ export default function DashboardPage() {
         )}
       </div>
     </Dashboard>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <ProtectedRoute allowedRoles={['user', 'epa_admin', 'health_admin', 'super_admin']}>
+      <DashboardPageContent />
+    </ProtectedRoute>
   )
 }

@@ -3,8 +3,9 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import DoctorDashboard from '@/components/DoctorDashboard'
+import ProtectedRoute from '../components/ProtectedRoute'
 
-export default function DoctorDashboardPage() {
+function DoctorDashboardPageContent() {
   const router = useRouter()
   const [showAnalysisModal, setShowAnalysisModal] = useState(false)
   const [isLiveCamera, setIsLiveCamera] = useState(false)
@@ -187,5 +188,13 @@ export default function DoctorDashboardPage() {
         )}
       </div>
     </DoctorDashboard>
+  )
+}
+
+export default function DoctorDashboardPage() {
+  return (
+    <ProtectedRoute allowedRoles={['health_admin', 'super_admin']} redirectPath="/doctor-login">
+      <DoctorDashboardPageContent />
+    </ProtectedRoute>
   )
 }

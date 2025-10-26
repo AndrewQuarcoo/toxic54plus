@@ -3,8 +3,9 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import EPADashboard from '@/components/EPADashboard'
+import ProtectedRoute from '../components/ProtectedRoute'
 
-export default function EPADashboardPage() {
+function EPADashboardPageContent() {
   const router = useRouter()
   const [showDetectionModal, setShowDetectionModal] = useState(false)
   const [isLiveCamera, setIsLiveCamera] = useState(false)
@@ -187,5 +188,13 @@ export default function EPADashboardPage() {
         )}
       </div>
     </EPADashboard>
+  )
+}
+
+export default function EPADashboardPage() {
+  return (
+    <ProtectedRoute allowedRoles={['epa_admin', 'super_admin']} redirectPath="/epa-login">
+      <EPADashboardPageContent />
+    </ProtectedRoute>
   )
 }
