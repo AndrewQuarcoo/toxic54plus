@@ -9,6 +9,7 @@ function DashboardPageContent() {
   const router = useRouter()
   const [showCaptureModal, setShowCaptureModal] = useState(false)
   const [isLiveCamera, setIsLiveCamera] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -28,15 +29,27 @@ function DashboardPageContent() {
     const file = e.target.files?.[0]
     if (file) {
       try {
+        setIsProcessing(true)
+        setShowCaptureModal(false)
+        
         // Import API function dynamically to avoid issues
-        const { uploadImage } = await import('@/app/services/api')
+        const { uploadImage, createChatSession } = await import('@/app/services/api')
+        
+        // Upload image
         const image = await uploadImage(file, 'Health check evidence')
         console.log('Image uploaded successfully:', image)
-        alert('Image uploaded successfully!')
-        setShowCaptureModal(false)
+        
+        // Create chat session with the image ID
+        const session = await createChatSession('image', image.id)
+        console.log('Chat session created:', session)
+        
+        // Navigate to chat with session ID
+        router.push(`/dashboard/chat?sessionId=${session.id}`)
+        
       } catch (error) {
-        console.error('Failed to upload image:', error)
-        alert('Failed to upload image. Please try again.')
+        console.error('Failed to process image:', error)
+        alert('Failed to process image. Please try again.')
+        setIsProcessing(false)
       }
     }
   }
@@ -109,8 +122,23 @@ function DashboardPageContent() {
           </div>
         </div>
 
+        {/* Processing Indicator */}
+        {isProcessing && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg p-8 w-full max-w-md mx-auto">
+              <div className="text-center">
+                <div className="flex justify-center mb-4">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
+                </div>
+                <h3 className="text-lg font-semibold text-black mb-2">Processing Image</h3>
+                <p className="text-gray-600">Please wait while we analyze your image...</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Capture Modal */}
-        {showCaptureModal && (
+        {showCaptureModal && !isProcessing && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md mx-auto max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">

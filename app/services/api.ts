@@ -61,11 +61,22 @@ export interface Image {
   id: string  // UUID
   user_id: string  // UUID
   report_id?: string  // UUID
-  filename: string
-  file_path: string
-  description: string
-  chat_session_id?: string  // UUID - auto-created for follow-up
+  image_url: string
+  image_type: string
+  prediction: string
+  confidence: number
+  toxicity_detected: boolean
+  contaminant_type?: string
+  location?: string
+  latitude?: number
+  longitude?: number
+  region?: string
   created_at: string
+  processed_at?: string
+  filename?: string
+  file_path?: string
+  description?: string
+  chat_session_id?: string  // UUID - auto-created for follow-up
 }
 
 export interface Alert {
@@ -148,22 +159,17 @@ export async function submitReport(
   latitude?: number, 
   longitude?: number
 ): Promise<Report> {
-  const token = localStorage.getItem('access_token')
-  
   const response = await fetch(`${API_BASE_URL}/reports/submit`, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    },
+    headers: getAuthHeaders(),
     body: JSON.stringify({
       original_input,
       input_language,
       input_type: 'text',
-      location: location || 'Ghana',
-      latitude: latitude || 6.6885,  // Default to Ghana coordinates
-      longitude: longitude || -1.6244,
-      region: location || 'Unknown'
+      location,
+      latitude,
+      longitude,
+      region: location
     })
   })
   
@@ -236,6 +242,25 @@ export async function uploadImage(file: File, description?: string): Promise<Ima
 }
 
 // Chatbot (Connected to Chat UI)
+export async function createChatSession(triggerType: 'report' | 'image', triggerId: string): Promise<ChatSession> {
+  const response = await fetch(`${API_BASE_URL}/chatbot/sessions/create`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      trigger_type: triggerType,
+      trigger_id: triggerId,
+      language: 'en'
+    })
+  })
+  
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.detail || 'Failed to create chat session')
+  }
+  
+  return await response.json()
+}
+
 export async function getChatSession(reportId: string): Promise<{
   session_id: string
   messages: ChatMessage[]
@@ -285,25 +310,6 @@ export async function getChatHistory(sessionId: string): Promise<ChatMessage[]> 
   
   if (!response.ok) {
     throw new Error('Failed to fetch chat history')
-  }
-  
-  return await response.json()
-}
-
-export async function createChatSessionForImage(imageId: string, language: 'en' | 'tw' = 'en'): Promise<ChatSession> {
-  const response = await fetch(`${API_BASE_URL}/chatbot/sessions/create`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({
-      trigger_type: 'image',
-      trigger_id: imageId,
-      language
-    })
-  })
-  
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || 'Failed to create chat session')
   }
   
   return await response.json()
