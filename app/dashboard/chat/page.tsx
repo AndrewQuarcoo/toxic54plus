@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Dashboard from '@/components/Dashboard'
 import { PromptInputBox } from '@/components/ai-prompt-box'
 import { useIsMobile } from '@/app/hooks/use-mobile'
@@ -30,20 +31,150 @@ function ChatPageContent() {
   const formatMessage = (message: string | undefined) => {
     if (!message) return <p>No message</p>
     
-    return message.split('\n').map((line, index) => {
-      if (line.startsWith('**') && line.endsWith('**')) {
-        return <strong key={index} className="font-semibold">{line.slice(2, -2)}</strong>
+    // Split by lines
+    const lines = message.split('\n')
+    const elements: JSX.Element[] = []
+    let currentParagraph: string[] = []
+    let currentListItems: JSX.Element[] = []
+    let currentListType: 'ul' | 'ol' | null = null
+    
+    const flushParagraph = (key: string) => {
+      if (currentParagraph.length > 0) {
+        elements.push(
+          <p key={key} className="mb-2">
+            {formatInlineText(currentParagraph.join(' '))}
+          </p>
+        )
+        currentParagraph = []
       }
+    }
+    
+    const flushList = (key: string) => {
+      if (currentListItems.length > 0 && currentListType) {
+        const ListTag = currentListType
+        const listClass = currentListType === 'ul' ? 'list-disc' : 'list-decimal'
+        elements.push(
+          <ListTag key={key} className={`mb-2 ml-4 ${listClass}`}>
+            {currentListItems}
+          </ListTag>
+        )
+        currentListItems = []
+        currentListType = null
+      }
+    }
+    
+    const processLine = (line: string, index: number) => {
+      // Check for bullet points
+      if (line.trim().match(/^[\*\-]\s/)) {
+        flushParagraph(`para-${index}`)
+        flushList(`list-before-${index}`)
+        currentListType = 'ul'
+        currentListItems.push(
+          <li key={index} className="mb-1 ml-4">
+            {formatInlineText(line.replace(/^[\*\-]\s/, '').trim())}
+          </li>
+        )
+        return
+      }
+      
+      // Check for numbered lists
       if (line.match(/^\d+\.\s/)) {
-        return <li key={index} className="ml-4 list-decimal">{line}</li>
+        flushParagraph(`para-${index}`)
+        flushList(`list-before-${index}`)
+        currentListType = 'ol'
+        currentListItems.push(
+          <li key={index} className="mb-1 ml-4">
+            {formatInlineText(line.replace(/^\d+\.\s/, '').trim())}
+          </li>
+        )
+        return
       }
-      return <p key={index}>{line}</p>
-    })
+      
+      // Check for headers (lines with bold only)
+      if (line.trim().startsWith('**') && line.trim().endsWith('**') && line.trim().length > 4) {
+        flushParagraph(`para-${index}`)
+        flushList(`list-before-${index}`)
+        elements.push(
+          <p key={index} className="mb-2 font-semibold">
+            {formatInlineText(line)}
+          </p>
+        )
+        return
+      }
+      
+      // Regular paragraph text
+      if (line.trim()) {
+        if (currentListItems.length > 0) {
+          flushList(`list-end-${index}`)
+        }
+        currentParagraph.push(line)
+      } else if (currentParagraph.length > 0) {
+        // Empty line - flush current paragraph
+        flushParagraph(`para-${index}`)
+      } else if (currentListItems.length > 0) {
+        // Empty line in a list
+        flushList(`list-end-${index}`)
+      }
+    }
+    
+    lines.forEach((line, index) => processLine(line, index))
+    
+    // Flush any remaining content
+    flushParagraph('para-final')
+    flushList('list-final')
+    
+    return <>{elements}</>
   }
+  
+  const formatInlineText = (text: string) => {
+    // Split by ** for bold text
+    const parts = text.split(/(\*\*.*?\*\*)/g)
+    
+    return (
+      <>
+        {parts.map((part, index) => {
+          if (part.startsWith('**') && part.endsWith('**')) {
+            return <strong key={index} className="font-semibold">{part.slice(2, -2)}</strong>
+          }
+          return <span key={index}>{part}</span>
+        })}
+      </>
+    )
+  }
+
+  const searchParams = useSearchParams()
 
   useEffect(() => {
     // Load existing chat session if available
     const loadChatSession = async () => {
+      // First check for sessionId from query params (from image upload)
+      const sessionIdFromQuery = searchParams.get('sessionId')
+      
+      if (sessionIdFromQuery) {
+        setSessionId(sessionIdFromQuery)
+        localStorage.setItem('chat_session_id', sessionIdFromQuery)
+        
+        try {
+          const session = await getChatSessionById(sessionIdFromQuery)
+          
+          // Convert API messages to UI messages
+          const formattedMessages: Message[] = session.messages.map((msg: APIChatMessage, idx: number) => ({
+            id: idx + 1,
+            message: userLanguage === 'tw' && msg.content_twi ? msg.content_twi : msg.content,
+            messageEn: msg.role === 'user' ? msg.content : (msg.content || msg.content),
+            messageTw: msg.content_twi || msg.content,
+            timestamp: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            isUser: msg.role === 'user'
+          }))
+          
+          setMessages(formattedMessages)
+          return
+        } catch (error) {
+          console.error('Failed to load chat session from query:', error)
+        }
+      }
+      
+      // Fallback to stored session
       const storedSessionId = localStorage.getItem('chat_session_id')
       const storedReportId = localStorage.getItem('current_report_id')
       
@@ -72,7 +203,7 @@ function ChatPageContent() {
     }
     
     loadChatSession()
-  }, [userLanguage])
+  }, [userLanguage, searchParams])
 
   const handleSendMessage = async (message: string, files?: File[]) => {
     if (!message.trim() && (!files || files.length === 0)) return
@@ -280,7 +411,7 @@ function ChatPageContent() {
                             ? 'bg-blue-500 text-white rounded-br-md'
                             : 'bg-gray-50 text-gray-900 border border-gray-200 rounded-bl-md'
                         } ${isMobile ? 'px-3 py-2 text-sm' : 'px-4 py-3'}`}>
-                          <div className="prose prose-sm max-w-none">
+                          <div className="prose prose-sm max-w-none break-words">
                             {formatMessage(currentMessage)}
                           </div>
                           

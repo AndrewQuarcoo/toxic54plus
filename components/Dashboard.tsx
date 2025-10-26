@@ -10,7 +10,6 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ children }: DashboardProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const pathname = usePathname()
   const { logout, user } = useAuth()
@@ -28,18 +27,8 @@ export default function Dashboard({ children }: DashboardProps) {
 
   return (
     <div className="h-screen bg-gray-50 overflow-hidden flex">
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside className={`${sidebarCollapsed ? 'w-16' : 'w-64'} bg-white border-r border-black transform transition-all duration-300 ease-in-out flex flex-col ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-      } fixed lg:static inset-y-0 left-0 z-50`}>
+      {/* Sidebar - Desktop only */}
+      <aside className={`${sidebarCollapsed ? 'w-16' : 'w-64'} hidden lg:flex bg-white border-r border-black transition-all duration-300 ease-in-out flex flex-col`}>
         
         {/* Sidebar Header */}
         <div className="flex items-center justify-between h-12 px-4 border-b border-gray-200">
@@ -48,24 +37,14 @@ export default function Dashboard({ children }: DashboardProps) {
               <span className="italic">TOXIC</span>54<span className="text-green-500">+</span>
             </div>
           )}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={toggleSidebar}
-              className="hidden lg:block text-gray-400 hover:text-black transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="lg:hidden text-gray-400 hover:text-black"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+          <button
+            onClick={toggleSidebar}
+            className="text-gray-400 hover:text-black transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
         </div>
 
         {/* Navigation */}
@@ -82,7 +61,6 @@ export default function Dashboard({ children }: DashboardProps) {
                         ? 'bg-green-500 text-black'
                         : 'text-gray-700 hover:bg-gray-100'
                     }`}
-                    onClick={() => setSidebarOpen(false)}
                     title={sidebarCollapsed ? item.name : undefined}
                   >
                     <span className={sidebarCollapsed ? '' : 'mr-3'}>
@@ -157,27 +135,62 @@ export default function Dashboard({ children }: DashboardProps) {
 
       {/* Main content */}
       <div className="flex-1 h-full flex flex-col min-w-0">
-        {/* Mobile menu button */}
-        <div className="lg:hidden flex items-center justify-between p-4 bg-white border-b border-gray-200 flex-shrink-0">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="text-gray-400 hover:text-black"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-          <div className="text-lg font-bold text-black truncate">
+        {/* Mobile header */}
+        <div className="lg:hidden flex items-center justify-center p-4 bg-white border-b border-gray-200 flex-shrink-0">
+          <div className="text-lg font-bold text-black">
             <span className="italic">TOXIC</span>54<span className="text-green-500">+</span>
           </div>
         </div>
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto min-h-0">
+        <main className="flex-1 overflow-auto min-h-0 pb-16 lg:pb-0">
           <div className="h-full">
             {children}
           </div>
         </main>
+
+        {/* Mobile bottom navigation */}
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+          <ul className="flex items-center justify-around">
+            {navigation.map((item) => {
+              const isActive = pathname === item.href
+              return (
+                <li key={item.name} className="flex-1">
+                  <Link
+                    href={item.href}
+                    className={`flex flex-col items-center justify-center py-2 px-1 text-xs transition-colors ${
+                      isActive
+                        ? 'text-green-500'
+                        : 'text-gray-600'
+                    }`}
+                  >
+                    {item.name === 'Home' && (
+                      <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                      </svg>
+                    )}
+                    {item.name === 'Maps' && (
+                      <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                      </svg>
+                    )}
+                    {item.name === 'Chat' && (
+                      <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                    )}
+                    {item.name === 'Results' && (
+                      <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    )}
+                    <span className="font-medium">{item.name}</span>
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </nav>
       </div>
     </div>
   )
