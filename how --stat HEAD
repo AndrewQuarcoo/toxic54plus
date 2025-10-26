@@ -1,0 +1,403 @@
+[1mdiff --git a/app/doctor-dashboard/analysis/page.tsx b/app/doctor-dashboard/analysis/page.tsx[m
+[1mindex be35fdb..d617083 100644[m
+[1m--- a/app/doctor-dashboard/analysis/page.tsx[m
+[1m+++ b/app/doctor-dashboard/analysis/page.tsx[m
+[36m@@ -1,55 +1,141 @@[m
+ 'use client'[m
+ [m
+[31m-import { useState } from 'react'[m
+[32m+[m[32mimport { useState, useEffect } from 'react'[m
+ import DoctorDashboard from '@/components/DoctorDashboard'[m
+ import ProtectedRoute from '@/app/components/ProtectedRoute'[m
+[32m+[m[32mimport { useAuth } from '@/app/contexts/AuthContext'[m
+[32m+[m[32mimport { getAllReports } from '@/app/services/api'[m
+[32m+[m
+[32m+[m[32mconst API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://toxitrace-backendx.onrender.com'[m
+[32m+[m
+[32m+[m[32minterface Report {[m
+[32m+[m[32m  id: string[m
+[32m+[m[32m  user_id: string[m
+[32m+[m[32m  original_input: string[m
+[32m+[m[32m  symptoms: string[][m
+[32m+[m[32m  toxicity_likelihood: string[m
+[32m+[m[32m  ai_diagnosis: string[m
+[32m+[m[32m  reasoning?: string[m
+[32m+[m[32m  recommendations?: string[][m
+[32m+[m[32m  suspected_chemicals?: string[][m
+[32m+[m[32m  status: string[m
+[32m+[m[32m  created_at: string[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32minterface DashboardSummary {[m
+[32m+[m[32m  total_reports: number[m
+[32m+[m[32m  pending_reports: number[m
+[32m+[m[32m  investigating_reports: number[m
+[32m+[m[32m  resolved_reports: number[m
+[32m+[m[32m  active_alerts: number[m
+[32m+[m[32m}[m
+ [m
+ function AnalysisPageContent() {[m
+[32m+[m[32m  const { token } = useAuth()[m
+   const [activeTab, setActiveTab] = useState('overview')[m
+[32m+[m[32m  const [reports, setReports] = useState<Report[]>([])[m
+[32m+[m[32m  const [summary, setSummary] = useState<DashboardSummary | null>(null)[m
+[32m+[m[32m  const [loading, setLoading] = useState(true)[m
+[32m+[m
+[32m+[m[32m  useEffect(() => {[m
+[32m+[m[32m    fetchData()[m
+[32m+[m[32m  }, [token])[m
+ [m
+[31m-  const recentAnalyses = [[m
+[31m-    {[m
+[31m-      id: 1,[m
+[31m-      patientName: 'John Doe',[m
+[31m-      analysisType: 'Skin Condition Analysis',[m
+[31m-      date: '2024-01-15',[m
+[31m-      result: 'Moderate Toxin Exposure Detected',[m
+[31m-      severity: 'Moderate',[m
+[31m-      recommendation: 'Immediate treatment recommended'[m
+[31m-    },[m
+[31m-    {[m
+[31m-      id: 2,[m
+[31m-      patientName: 'Jane Smith',[m
+[31m-      analysisType: 'Respiratory Test',[m
+[31m-      date: '2024-01-14',[m
+[31m-      result: 'Mild Symptoms Detected',[m
+[31m-      severity: 'Low',[m
+[31m-      recommendation: 'Monitor for 48 hours'[m
+[31m-    },[m
+[31m-    {[m
+[31m-      id: 3,[m
+[31m-      patientName: 'Michael Johnson',[m
+[31m-      analysisType: 'Blood Test Analysis',[m
+[31m-      date: '2024-01-13',[m
+[31m-      result: 'Elevated Toxin Levels',[m
+[31m-      severity: 'High',[m
+[31m-      recommendation: 'Urgent medical intervention required'[m
+[31m-    },[m
+[31m-  ][m
+[32m+[m[32m  const fetchData = async () => {[m
+[32m+[m[32m    if (!token) return[m
+[32m+[m[41m    [m
+[32m+[m[32m    try {[m
+[32m+[m[32m      setLoading(true)[m
+[32m+[m[41m      [m
+[32m+[m[32m      // Fetch dashboard summary[m
+[32m+[m[32m      const summaryResponse = await fetch(`${API_BASE_URL}/dashboard/summary`, {[m
+[32m+[m[32m        headers: {[m
+[32m+[m[32m          'Authorization': `Bearer ${token}`,[m
+[32m+[m[32m          'Content-Type': 'application/json'[m
+[32m+[m[32m        }[m
+[32m+[m[32m      })[m
+[32m+[m[41m      [m
+[32m+[m[32m      if (summaryResponse.ok) {[m
+[32m+[m[32m        const summaryData = await summaryResponse.json()[m
+[32m+[m[32m        setSummary(summaryData)[m
+[32m+[m[32m      }[m
+[32m+[m
+[32m+[m[32m      // Fetch all reports[m
+[32m+[m[32m      const reportsResponse = await fetch(`${API_BASE_URL}/reports/all`, {[m
+[32m+[m[32m        headers: {[m
+[32m+[m[32m          'Authorization': `Bearer ${token}`,[m
+[32m+[m[32m          'Content-Type': 'application/json'[m
+[32m+[m[32m        }[m
+[32m+[m[32m      })[m
+[32m+[m[41m      [m
+[32m+[m[32m      if (reportsResponse.ok) {[m
+[32m+[m[32m        const reportsData = await reportsResponse.json()[m
+[32m+[m[32m        // Handle paginated or direct array response[m
+[32m+[m[32m        const reportsList = Array.isArray(reportsData) ? reportsData : (reportsData.reports || [])[m
+[32m+[m[32m        setReports(reportsList.slice(0, 10)) // Show 10 most recent[m
+[32m+[m[32m      }[m
+[32m+[m[32m    } catch (error) {[m
+[32m+[m[32m      console.error('Error fetching data:', error)[m
+[32m+[m[32m    } finally {[m
+[32m+[m[32m      setLoading(false)[m
+[32m+[m[32m    }[m
+[32m+[m[32m  }[m
+ [m
+   const getSeverityBadge = (severity: string) => {[m
+[31m-    const colors = {[m
+[31m-      'Low': 'bg-green-100 text-green-800',[m
+[31m-      'Moderate': 'bg-yellow-100 text-yellow-800',[m
+[31m-      'High': 'bg-red-100 text-red-800',[m
+[32m+[m[32m    const colors: { [key: string]: string } = {[m
+[32m+[m[32m      'LOW': 'bg-green-100 text-green-800',[m
+[32m+[m[32m      'MILD': 'bg-green-100 text-green-800',[m
+[32m+[m[32m      'MODERATE': 'bg-yellow-100 text-yellow-800',[m
+[32m+[m[32m      'HIGH': 'bg-red-100 text-red-800',[m
+[32m+[m[32m      'SEVERE': 'bg-red-100 text-red-800',[m
+[32m+[m[32m      'CRITICAL': 'bg-red-100 text-red-800',[m
+     }[m
+     return ([m
+[31m-      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${colors[severity as keyof typeof colors] || 'bg-gray-100 text-gray-800'}`}>[m
+[32m+[m[32m      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${colors[severity] || 'bg-gray-100 text-gray-800'}`}>[m
+         {severity}[m
+       </span>[m
+     )[m
+   }[m
+ [m
+[32m+[m[32m  const getDisplaySeverity = (likelihood: string) => {[m
+[32m+[m[32m    const mapping: { [key: string]: string } = {[m
+[32m+[m[32m      'LOW': 'Low',[m
+[32m+[m[32m      'MILD': 'Low',[m
+[32m+[m[32m      'MODERATE': 'Moderate',[m
+[32m+[m[32m      'HIGH': 'High',[m
+[32m+[m[32m      'SEVERE': 'High',[m
+[32m+[m[32m      'CRITICAL': 'High'[m
+[32m+[m[32m    }[m
+[32m+[m[32m    return mapping[likelihood] || 'Unknown'[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  const getAnalysisType = (report: Report) => {[m
+[32m+[m[32m    if (report.suspected_chemicals && report.suspected_chemicals.length > 0) {[m
+[32m+[m[32m      return report.suspected_chemicals.join(', ')[m
+[32m+[m[32m    }[m
+[32m+[m[32m    if (report.symptoms && report.symptoms.length > 0) {[m
+[32m+[m[32m      return report.symptoms.join(', ')[m
+[32m+[m[32m    }[m
+[32m+[m[32m    return 'Symptom Analysis'[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  if (loading) {[m
+[32m+[m[32m    return ([m
+[32m+[m[32m      <DoctorDashboard>[m
+[32m+[m[32m        <div className="p-8">[m
+[32m+[m[32m          <div className="flex items-center justify-center h-64">[m
+[32m+[m[32m            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>[m
+[32m+[m[32m          </div>[m
+[32m+[m[32m        </div>[m
+[32m+[m[32m      </DoctorDashboard>[m
+[32m+[m[32m    )[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  // Calculate urgent cases (SEVERE or CRITICAL)[m
+[32m+[m[32m  const urgentCases = reports.filter(r =>[m[41m [m
+[32m+[m[32m    ['SEVERE', 'CRITICAL'].includes(r.toxicity_likelihood?.toUpperCase() || '')[m
+[32m+[m[32m  ).length[m
+[32m+[m
+   return ([m
+     <DoctorDashboard>[m
+       <div className="p-8">[m
+[36m@@ -82,16 +168,6 @@[m [mfunction AnalysisPageContent() {[m
+               >[m
+                 Recent Analysis[m
+               </button>[m
+[31m-              <button[m
+[31m-                onClick={() => setActiveTab('upload')}[m
+[31m-                className={`py-4 px-1 border-b-2 font-medium text-sm ${[m
+[31m-                  activeTab === 'upload'[m
+[31m-                    ? 'border-blue-500 text-blue-600'[m
+[31m-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'[m
+[31m-                }`}[m
+[31m-              >[m
+[31m-                Upload New[m
+[31m-              </button>[m
+             </nav>[m
+           </div>[m
+         </div>[m
+[36m@@ -109,7 +185,7 @@[m [mfunction AnalysisPageContent() {[m
+                   </div>[m
+                   <div className="ml-4">[m
+                     <p className="text-sm font-medium text-gray-600">Total Analyses</p>[m
+[31m-                    <p className="text-2xl font-bold text-gray-900">127</p>[m
+[32m+[m[32m                    <p className="text-2xl font-bold text-gray-900">{summary?.total_reports || 0}</p>[m
+                   </div>[m
+                 </div>[m
+               </div>[m
+[36m@@ -123,7 +199,7 @@[m [mfunction AnalysisPageContent() {[m
+                   </div>[m
+                   <div className="ml-4">[m
+                     <p className="text-sm font-medium text-gray-600">Pending Review</p>[m
+[31m-                    <p className="text-2xl font-bold text-gray-900">12</p>[m
+[32m+[m[32m                    <p className="text-2xl font-bold text-gray-900">{summary?.pending_reports || 0}</p>[m
+                   </div>[m
+                 </div>[m
+               </div>[m
+[36m@@ -137,7 +213,7 @@[m [mfunction AnalysisPageContent() {[m
+                   </div>[m
+                   <div className="ml-4">[m
+                     <p className="text-sm font-medium text-gray-600">Urgent Cases</p>[m
+[31m-                    <p className="text-2xl font-bold text-gray-900">3</p>[m
+[32m+[m[32m                    <p className="text-2xl font-bold text-gray-900">{urgentCases}</p>[m
+                   </div>[m
+                 </div>[m
+               </div>[m
+[36m@@ -149,100 +225,41 @@[m [mfunction AnalysisPageContent() {[m
+               <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">[m
+                 <h3 className="text-lg font-medium text-gray-900">Recent Analyses</h3>[m
+               </div>[m
+[31m-              <div className="divide-y divide-gray-200">[m
+[31m-                {recentAnalyses.map((analysis) => ([m
+[31m-                  <div key={analysis.id} className="p-6 hover:bg-gray-50">[m
+[31m-                    <div className="flex items-start justify-between">[m
+[31m-                      <div className="flex-1">[m
+[31m-                        <div className="flex items-center gap-3 mb-2">[m
+[31m-                          <h4 className="text-sm font-medium text-gray-900">{analysis.patientName}</h4>[m
+[31m-                          {getSeverityBadge(analysis.severity)}[m
+[32m+[m[32m              {reports.length === 0 ? ([m
+[32m+[m[32m                <div className="p-8 text-center text-gray-500">[m
+[32m+[m[32m                  No recent analyses found[m
+[32m+[m[32m                </div>[m
+[32m+[m[32m              ) : ([m
+[32m+[m[32m                <div className="divide-y divide-gray-200">[m
+[32m+[m[32m                  {reports.map((report) => ([m
+[32m+[m[32m                    <div key={report.id} className="p-6 hover:bg-gray-50">[m
+[32m+[m[32m                      <div className="flex items-start justify-between">[m
+[32m+[m[32m                        <div className="flex-1">[m
+[32m+[m[32m                          <div className="flex items-center gap-3 mb-2">[m
+[32m+[m[32m                            <h4 className="text-sm font-medium text-gray-900">[m
+[32m+[m[32m                              Patient {report.user_id?.substring(0, 8) || 'Unknown'}[m
+[32m+[m[32m                            </h4>[m
+[32m+[m[32m                            {getSeverityBadge(report.toxicity_likelihood)}[m
+[32m+[m[32m                          </div>[m
+[32m+[m[32m                          <p className="text-sm text-gray-600 mb-1">{getAnalysisType(report)}</p>[m
+[32m+[m[32m                          <p className="text-sm text-gray-900 mb-2">{report.ai_diagnosis || 'No diagnosis available'}</p>[m
+[32m+[m[32m                          <p className="text-sm text-gray-600">[m
+[32m+[m[32m                            {report.reasoning || report.recommendations?.join(', ') || 'No specific recommendations'}[m
+[32m+[m[32m                          </p>[m
+[32m+[m[32m                        </div>[m
+[32m+[m[32m                        <div className="ml-4 text-right">[m
+[32m+[m[32m                          <p className="text-sm text-gray-500">[m
+[32m+[m[32m                            {new Date(report.created_at).toLocaleDateString()}[m
+[32m+[m[32m                          </p>[m
+[32m+[m[32m                          <button className="mt-2 text-sm text-blue-600 hover:text-blue-900 font-medium">[m
+[32m+[m[32m                            View Details[m
+[32m+[m[32m                          </button>[m
+                         </div>[m
+[31m-                        <p className="text-sm text-gray-600 mb-1">{analysis.analysisType}</p>[m
+[31m-                        <p className="text-sm text-gray-900 mb-2">{analysis.result}</p>[m
+[31m-                        <p className="text-sm text-gray-600">{analysis.recommendation}</p>[m
+[31m-                      </div>[m
+[31m-                      <div className="ml-4 text-right">[m
+[31m-                        <p className="text-sm text-gray-500">{analysis.date}</p>[m
+[31m-                        <button className="mt-2 text-sm text-blue-600 hover:text-blue-900 font-medium">[m
+[31m-                          View Details[m
+[31m-                        </button>[m
+                       </div>[m
+                     </div>[m
+[31m-                  </div>[m
+[31m-                ))}[m
+[31m-              </div>[m
+[31m-            </div>[m
+[31m-          )}[m
+[31m-[m
+[31m-          {activeTab === 'upload' && ([m
+[31m-            <div className="bg-white rounded-lg shadow p-8">[m
+[31m-              <div className="max-w-2xl mx-auto">[m
+[31m-                <h3 className="text-lg font-medium text-gray-900 mb-6">Upload Medical Analysis</h3>[m
+[31m-                [m
+[31m-                <div className="space-y-6">[m
+[31m-                  <div>[m
+[31m-                    <label className="block text-sm font-medium text-gray-700 mb-2">[m
+[31m-                      Patient Name[m
+[31m-                    </label>[m
+[31m-                    <input[m
+[31m-                      type="text"[m
+[31m-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"[m
+[31m-                      placeholder="Enter patient name"[m
+[31m-                    />[m
+[31m-                  </div>[m
+[31m-[m
+[31m-                  <div>[m
+[31m-                    <label className="block text-sm font-medium text-gray-700 mb-2">[m
+[31m-                      Analysis Type[m
+[31m-                    </label>[m
+[31m-                    <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">[m
+[31m-                      <option>Select analysis type</option>[m
+[31m-                      <option>Skin Condition Analysis</option>[m
+[31m-                      <option>Respiratory Test</option>[m
+[31m-                      <option>Blood Test Analysis</option>[m
+[31m-                      <option>Eye Examination</option>[m
+[31m-                    </select>[m
+[31m-                  </div>[m
+[31m-[m
+[31m-                  <div>[m
+[31m-                    <label className="block text-sm font-medium text-gray-700 mb-2">[m
+[31m-                      Upload Files[m
+[31m-                    </label>[m
+[31m-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors cursor-pointer">[m
+[31m-                      <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">[m
+[31m-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />[m
+[31m-                      </svg>[m
+[31m-                      <p className="mt-2 text-sm text-gray-600">[m
+[31m-                        Click to upload or drag and drop[m
+[31m-                      </p>[m
+[31m-                      <p className="mt-1 text-xs text-gray-500">[m
+[31m-                        PNG, JPG, PDF up to 10MB[m
+[31m-                      </p>[m
+[31m-                    </div>[m
+[31m-                  </div>[m
+[31m-[m
+[31m-                  <div>[m
+[31m-                    <label className="block text-sm font-medium text-gray-700 mb-2">[m
+[31m-                      Notes[m
+[31m-                    </label>[m
+[31m-                    <textarea[m
+[31m-                      rows={4}[m
+[31m-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"[m
+[31m-                      placeholder="Add any additional notes..."[m
+[31m-                    />[m
+[31m-                  </div>[m
+[31m-[m
+[31m-                  <div className="flex justify-end gap-3">[m
+[31m-                    <button className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">[m
+[31m-                      Cancel[m
+[31m-                    </button>[m
+[31m-                    <button className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">[m
+[31m-                      Submit Analysis[m
+[31m-                    </button>[m
+[31m-                  </div>[m
+[32m+[m[32m                  ))}[m
+                 </div>[m
+[31m-              </div>[m
+[32m+[m[32m              )}[m
+             </div>[m
+           )}[m
+         </div>[m
+[1mdiff --git a/app/doctor-dashboard/page.tsx b/app/doctor-dashboard/page.tsx[m
+[1mindex 5c1289a..098829f 100644[m
+[1m--- a/app/doctor-dashboard/page.tsx[m
+[1m+++ b/app/doctor-dashboard/page.tsx[m
+[36m@@ -1,7 +1,8 @@[m
+ 'use client'[m
+ [m
+[31m-import { useState, useRef } from 'react'[m
+[32m+[m[32mimport { useState, useRef, useEffect } from 'react'[m
+ import { useRouter } from 'next/navigation'[m
+[32m+[m[32mimport { toast } from 'sonner'[m
+ import DoctorDashboard from '@/components/DoctorDashboard'[m
+ import ProtectedRoute from '../components/ProtectedRoute'[m
+ [m
+[36m@@ -9,7 +10,11 @@[m [mfunction DoctorDashboardPageContent() {[m
+   const router = useRouter()[m
+   const [showAnalysisModal, setShowAnalysisModal] = useState(false)[m
+   const [isLiveCamera, setIsLiveCamera] = useState(false)[m
+[32m+[m[32m  const [isProcessing, setIsProcessing] = useState(false)[m
+[32m+[m[32m  const [selectedFile, setSelectedFile] = useState<File | null>(null)[m
+[32m+[m[32m  const [previewUrl, setPreviewUrl] = useState<string | null>(null)[m
+   const videoRef = useRef<HTMLVideoElement>(null)[m
+[32m+[m[32m  const canvasRef = useRef<HTMLCanvasElement>(null)[m
+   const fileInputRef = useRef<HTMLInputElement>(null)[m
+ [m
+   const handlePatientsClick = () => {[m
+[36m@@ -27,25 +32,130 @@[m [mfunction DoctorDashboardPageContent() {[m
+   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {[m
+     const file = e.target.files?.[0][m
+     if (file) {[m
+[31m-      console.log('File selected for analysis:', file.name)[m
+[31m-      // Handle file upload for medical analysis here[m
+[32m+[m[32m      // Create preview URL[m
+[32m+[m[32m      const url = URL.createObjectURL(file)[m
+[32m+[m[32m      setPreviewUrl(url)[m
+[32m+[m[32m      setSelectedFile(file)[m
+       setShowAnalysisModal(false)[m
+     }[m
+   }[m
+ [m
+[32m+[m[32m  const handleConfirmUpload = async () => {[m
+[32m+[m[32m    if (!selectedFile) return[m
+[32m+[m[41m    [m
+[32m+[m[32m    try {[m
+[32m+[m[32m      setIsProcessing(true)[m
+[32m+[m[4

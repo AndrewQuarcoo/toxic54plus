@@ -1,54 +1,140 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import DoctorDashboard from '@/components/DoctorDashboard'
 import ProtectedRoute from '@/app/components/ProtectedRoute'
+import { useAuth } from '@/app/contexts/AuthContext'
+import { getAllReports } from '@/app/services/api'
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://toxitrace-backendx.onrender.com'
+
+interface Report {
+  id: string
+  user_id: string
+  original_input: string
+  symptoms: string[]
+  toxicity_likelihood: string
+  ai_diagnosis: string
+  reasoning?: string
+  recommendations?: string[]
+  suspected_chemicals?: string[]
+  status: string
+  created_at: string
+}
+
+interface DashboardSummary {
+  total_reports: number
+  pending_reports: number
+  investigating_reports: number
+  resolved_reports: number
+  active_alerts: number
+}
 
 function AnalysisPageContent() {
+  const { token } = useAuth()
   const [activeTab, setActiveTab] = useState('overview')
+  const [reports, setReports] = useState<Report[]>([])
+  const [summary, setSummary] = useState<DashboardSummary | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const recentAnalyses = [
-    {
-      id: 1,
-      patientName: 'John Doe',
-      analysisType: 'Skin Condition Analysis',
-      date: '2024-01-15',
-      result: 'Moderate Toxin Exposure Detected',
-      severity: 'Moderate',
-      recommendation: 'Immediate treatment recommended'
-    },
-    {
-      id: 2,
-      patientName: 'Jane Smith',
-      analysisType: 'Respiratory Test',
-      date: '2024-01-14',
-      result: 'Mild Symptoms Detected',
-      severity: 'Low',
-      recommendation: 'Monitor for 48 hours'
-    },
-    {
-      id: 3,
-      patientName: 'Michael Johnson',
-      analysisType: 'Blood Test Analysis',
-      date: '2024-01-13',
-      result: 'Elevated Toxin Levels',
-      severity: 'High',
-      recommendation: 'Urgent medical intervention required'
-    },
-  ]
+  useEffect(() => {
+    fetchData()
+  }, [token])
+
+  const fetchData = async () => {
+    if (!token) return
+    
+    try {
+      setLoading(true)
+      
+      // Fetch dashboard summary
+      const summaryResponse = await fetch(`${API_BASE_URL}/dashboard/summary`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (summaryResponse.ok) {
+        const summaryData = await summaryResponse.json()
+        setSummary(summaryData)
+      }
+
+      // Fetch all reports
+      const reportsResponse = await fetch(`${API_BASE_URL}/reports/all`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (reportsResponse.ok) {
+        const reportsData = await reportsResponse.json()
+        // Handle paginated or direct array response
+        const reportsList = Array.isArray(reportsData) ? reportsData : (reportsData.reports || [])
+        setReports(reportsList.slice(0, 10)) // Show 10 most recent
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const getSeverityBadge = (severity: string) => {
-    const colors = {
-      'Low': 'bg-green-100 text-green-800',
-      'Moderate': 'bg-yellow-100 text-yellow-800',
-      'High': 'bg-red-100 text-red-800',
+    const colors: { [key: string]: string } = {
+      'LOW': 'bg-green-100 text-green-800',
+      'MILD': 'bg-green-100 text-green-800',
+      'MODERATE': 'bg-yellow-100 text-yellow-800',
+      'HIGH': 'bg-red-100 text-red-800',
+      'SEVERE': 'bg-red-100 text-red-800',
+      'CRITICAL': 'bg-red-100 text-red-800',
     }
     return (
-      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${colors[severity as keyof typeof colors] || 'bg-gray-100 text-gray-800'}`}>
+      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${colors[severity] || 'bg-gray-100 text-gray-800'}`}>
         {severity}
       </span>
     )
   }
+
+  const getDisplaySeverity = (likelihood: string) => {
+    const mapping: { [key: string]: string } = {
+      'LOW': 'Low',
+      'MILD': 'Low',
+      'MODERATE': 'Moderate',
+      'HIGH': 'High',
+      'SEVERE': 'High',
+      'CRITICAL': 'High'
+    }
+    return mapping[likelihood] || 'Unknown'
+  }
+
+  const getAnalysisType = (report: Report) => {
+    if (report.suspected_chemicals && report.suspected_chemicals.length > 0) {
+      return report.suspected_chemicals.join(', ')
+    }
+    if (report.symptoms && report.symptoms.length > 0) {
+      return report.symptoms.join(', ')
+    }
+    return 'Symptom Analysis'
+  }
+
+  if (loading) {
+    return (
+      <DoctorDashboard>
+        <div className="p-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        </div>
+      </DoctorDashboard>
+    )
+  }
+
+  // Calculate urgent cases (SEVERE or CRITICAL)
+  const urgentCases = reports.filter(r => 
+    ['SEVERE', 'CRITICAL'].includes(r.toxicity_likelihood?.toUpperCase() || '')
+  ).length
 
   return (
     <DoctorDashboard>
@@ -82,16 +168,6 @@ function AnalysisPageContent() {
               >
                 Recent Analysis
               </button>
-              <button
-                onClick={() => setActiveTab('upload')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'upload'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Upload New
-              </button>
             </nav>
           </div>
         </div>
@@ -109,7 +185,7 @@ function AnalysisPageContent() {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Total Analyses</p>
-                    <p className="text-2xl font-bold text-gray-900">127</p>
+                    <p className="text-2xl font-bold text-gray-900">{summary?.total_reports || 0}</p>
                   </div>
                 </div>
               </div>
@@ -123,7 +199,7 @@ function AnalysisPageContent() {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Pending Review</p>
-                    <p className="text-2xl font-bold text-gray-900">12</p>
+                    <p className="text-2xl font-bold text-gray-900">{summary?.pending_reports || 0}</p>
                   </div>
                 </div>
               </div>
@@ -137,7 +213,7 @@ function AnalysisPageContent() {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Urgent Cases</p>
-                    <p className="text-2xl font-bold text-gray-900">3</p>
+                    <p className="text-2xl font-bold text-gray-900">{urgentCases}</p>
                   </div>
                 </div>
               </div>
@@ -149,100 +225,41 @@ function AnalysisPageContent() {
               <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
                 <h3 className="text-lg font-medium text-gray-900">Recent Analyses</h3>
               </div>
-              <div className="divide-y divide-gray-200">
-                {recentAnalyses.map((analysis) => (
-                  <div key={analysis.id} className="p-6 hover:bg-gray-50">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h4 className="text-sm font-medium text-gray-900">{analysis.patientName}</h4>
-                          {getSeverityBadge(analysis.severity)}
-                        </div>
-                        <p className="text-sm text-gray-600 mb-1">{analysis.analysisType}</p>
-                        <p className="text-sm text-gray-900 mb-2">{analysis.result}</p>
-                        <p className="text-sm text-gray-600">{analysis.recommendation}</p>
-                      </div>
-                      <div className="ml-4 text-right">
-                        <p className="text-sm text-gray-500">{analysis.date}</p>
-                        <button className="mt-2 text-sm text-blue-600 hover:text-blue-900 font-medium">
-                          View Details
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'upload' && (
-            <div className="bg-white rounded-lg shadow p-8">
-              <div className="max-w-2xl mx-auto">
-                <h3 className="text-lg font-medium text-gray-900 mb-6">Upload Medical Analysis</h3>
-                
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Patient Name
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Enter patient name"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Analysis Type
-                    </label>
-                    <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                      <option>Select analysis type</option>
-                      <option>Skin Condition Analysis</option>
-                      <option>Respiratory Test</option>
-                      <option>Blood Test Analysis</option>
-                      <option>Eye Examination</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Upload Files
-                    </label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors cursor-pointer">
-                      <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                      </svg>
-                      <p className="mt-2 text-sm text-gray-600">
-                        Click to upload or drag and drop
-                      </p>
-                      <p className="mt-1 text-xs text-gray-500">
-                        PNG, JPG, PDF up to 10MB
-                      </p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Notes
-                    </label>
-                    <textarea
-                      rows={4}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Add any additional notes..."
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-3">
-                    <button className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-                      Cancel
-                    </button>
-                    <button className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
-                      Submit Analysis
-                    </button>
-                  </div>
+              {reports.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">
+                  No recent analyses found
                 </div>
-              </div>
+              ) : (
+                <div className="divide-y divide-gray-200">
+                  {reports.map((report) => (
+                    <div key={report.id} className="p-6 hover:bg-gray-50">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h4 className="text-sm font-medium text-gray-900">
+                              Patient {report.user_id?.substring(0, 8) || 'Unknown'}
+                            </h4>
+                            {getSeverityBadge(report.toxicity_likelihood)}
+                          </div>
+                          <p className="text-sm text-gray-600 mb-1">{getAnalysisType(report)}</p>
+                          <p className="text-sm text-gray-900 mb-2">{report.ai_diagnosis || 'No diagnosis available'}</p>
+                          <p className="text-sm text-gray-600">
+                            {report.reasoning || report.recommendations?.join(', ') || 'No specific recommendations'}
+                          </p>
+                        </div>
+                        <div className="ml-4 text-right">
+                          <p className="text-sm text-gray-500">
+                            {new Date(report.created_at).toLocaleDateString()}
+                          </p>
+                          <button className="mt-2 text-sm text-blue-600 hover:text-blue-900 font-medium">
+                            View Details
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

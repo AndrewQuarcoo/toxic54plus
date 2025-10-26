@@ -57,9 +57,11 @@ function ChatPageContent() {
           // Convert API messages to UI messages
           const formattedMessages: Message[] = session.messages.map((msg: APIChatMessage, idx: number) => ({
             id: idx + 1,
-            message: userLanguage === 'tw' && msg.message_text_twi ? msg.message_text_twi : msg.message_text,
+            message: userLanguage === 'tw' && msg.content_twi ? msg.content_twi : msg.content,
+            messageEn: msg.role === 'user' ? msg.content : (msg.content || msg.content),
+            messageTw: msg.content_twi || msg.content,
             timestamp: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            isUser: msg.sender === 'user'
+            isUser: msg.role === 'user'
           }))
           
           setMessages(formattedMessages)
@@ -87,8 +89,11 @@ function ChatPageContent() {
     setIsTyping(true)
     
     try {
-      // First message creates a report and chat session
-      if (!sessionId && !reportId) {
+      // Check if this is the very first message (no report or session exists)
+      const hasExistingReport = reportId || localStorage.getItem('current_report_id')
+      const hasExistingSession = sessionId || localStorage.getItem('chat_session_id')
+      
+      if (!hasExistingReport && !hasExistingSession) {
         // Step 1: Create report from user's symptom message
         const report = await submitReport(message, 'Ghana', userLanguage)
         setReportId(report.id)
@@ -96,8 +101,8 @@ function ChatPageContent() {
         
         // The report contains the AI analysis directly
         // Backend returns ai_diagnosis and ai_diagnosis_twi
-        const aiDiagnosisEn = (report as any).ai_diagnosis || report.reasoning
-        const aiDiagnosisTw = (report as any).ai_diagnosis_twi || report.reasoning
+        const aiDiagnosisEn = report.ai_diagnosis || report.reasoning || ''
+        const aiDiagnosisTw = report.ai_diagnosis_twi || report.reasoning || ''
         
         const aiGreeting: Message = {
           id: Date.now() + 1,
@@ -121,11 +126,45 @@ function ChatPageContent() {
           console.error('Failed to create chat session, but report was created:', sessionError)
           // Continue without session - user can still see the initial diagnosis
         }
-      } else if (sessionId) {
+      } else if (hasExistingSession) {
         // Send message in existing chat session
-        const response = await sendChatMessage(sessionId, message, userLanguage)
+        const activeSessionId = sessionId || localStorage.getItem('chat_session_id')
+        if (!activeSessionId) {
+          throw new Error('No active session')
+        }
+        
+        const response = await sendChatMessage(activeSessionId, message, userLanguage)
         
         // Extract content from assistant_message (actual API response structure)
+        const aiResponseEn = response?.assistant_message?.content || 'Response received'
+        const aiResponseTw = response?.assistant_message?.content_twi || 'Response received'
+        
+        const aiResponse: Message = {
+          id: Date.now() + 1,
+          message: userLanguage === 'tw' ? aiResponseTw : aiResponseEn,
+          messageEn: aiResponseEn,
+          messageTw: aiResponseTw,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          isUser: false,
+        }
+        setMessages((prev) => [...prev, aiResponse])
+      } else {
+        // Report exists but no session yet - create session now
+        const currentReportId = reportId || localStorage.getItem('current_report_id')
+        if (!currentReportId) {
+          throw new Error('No report ID found')
+        }
+        
+        const session = await createChatSession('report', currentReportId)
+        const sessionIdFromAPI = typeof session === 'string' ? session : session.id
+        if (sessionIdFromAPI) {
+          setSessionId(sessionIdFromAPI)
+          localStorage.setItem('chat_session_id', sessionIdFromAPI)
+        }
+        
+        // Now send the message
+        const response = await sendChatMessage(sessionIdFromAPI, message, userLanguage)
+        
         const aiResponseEn = response?.assistant_message?.content || 'Response received'
         const aiResponseTw = response?.assistant_message?.content_twi || 'Response received'
         

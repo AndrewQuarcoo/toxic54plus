@@ -17,24 +17,34 @@ export interface User {
 export interface Report {
   id: string  // UUID
   user_id: string  // UUID
-  symptoms: string  // Original text (Twi or English)
-  translated_text: string  // English translation
+  original_input: string  // Original text (Twi or English)
+  translated_input?: string  // English translation
+  symptoms?: string[]  // Extracted symptoms array
   location: string
   latitude?: number
   longitude?: number
   
   // AI Analysis
-  toxicity_level: 'NONE' | 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL'
-  confidence: number  // 0.0 to 1.0
-  suspected_chemicals: string[]
-  reasoning: string
-  recommendations: string[]
+  toxicity_level?: 'NONE' | 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL'
+  toxicity_likelihood?: string  // From backend (MILD/MODERATE/SEVERE)
+  confidence?: number  // 0.0 to 1.0
+  confidence_score?: number  // 0.0 to 1.0
+  suspected_chemicals?: string[]
+  possible_causes?: string[]
+  reasoning?: string
+  recommendations?: string[]
+  
+  // AI Diagnosis (main fields from backend)
+  ai_diagnosis?: string  // English diagnosis
+  ai_diagnosis_twi?: string  // Twi translation of diagnosis
+  input_language?: 'en' | 'tw'
   
   // Metadata
-  status: 'pending' | 'under_review' | 'resolved' | 'false_alarm'
+  status?: 'pending' | 'under_review' | 'resolved' | 'false_alarm' | 'PENDING' | 'INVESTIGATING'
   chat_session_id?: string  // UUID - auto-created for follow-up
+  region?: string
   created_at: string
-  updated_at: string
+  updated_at?: string
 }
 
 export interface ChatSession {
@@ -49,12 +59,15 @@ export interface ChatSession {
 }
 
 export interface ChatMessage {
-  id: string  // UUID
-  session_id: string  // UUID
-  sender: 'user' | 'ai'
-  message_text: string  // English version
-  message_text_twi: string  // Twi translation
+  id: number
+  session_id: string
+  role: 'user' | 'assistant'
+  content: string  // Primary content (English or user input)
+  content_twi?: string  // Twi translation (if applicable)
+  language: 'en' | 'tw'
   created_at: string
+  response_time_ms?: number  // Response latency
+  tokens_used?: number  // Gemini API tokens
 }
 
 export interface Image {
@@ -164,7 +177,7 @@ export async function submitReport(
   longitude?: number
 ): Promise<Report> {
   const token = localStorage.getItem('access_token')
-  const response = await fetch(`${API_BASE_URL}/reports/submit`, {
+  const response = await fetch(`${API_BASE_URL}/reports/create`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -356,14 +369,9 @@ export async function getChatSession(reportId: string): Promise<{
 
 export async function sendChatMessage(sessionId: string, message: string, language: 'en' | 'tw' = 'en'): Promise<{
   session_id: string
-  user_message: any
-  assistant_message: {
-    id: string
-    content: string
-    content_twi: string
-    language: string
-  }
-  suggested_questions?: string[]
+  user_message: ChatMessage
+  assistant_message: ChatMessage
+  suggested_questions: string[]
 }> {
   const token = localStorage.getItem('access_token')
   const response = await fetch(`${API_BASE_URL}/chat/messages/send`, {
@@ -503,4 +511,5 @@ export async function makeRequest(url: string, options: RequestInit = {}) {
     throw error
   }
 }
+
 
