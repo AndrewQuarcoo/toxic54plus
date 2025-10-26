@@ -148,17 +148,22 @@ export async function submitReport(
   latitude?: number, 
   longitude?: number
 ): Promise<Report> {
+  const token = localStorage.getItem('access_token')
+  
   const response = await fetch(`${API_BASE_URL}/reports/submit`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
     body: JSON.stringify({
       original_input,
       input_language,
       input_type: 'text',
-      location,
-      latitude,
-      longitude,
-      region: location
+      location: location || 'Ghana',
+      latitude: latitude || 6.6885,  // Default to Ghana coordinates
+      longitude: longitude || -1.6244,
+      region: location || 'Unknown'
     })
   })
   
@@ -280,6 +285,25 @@ export async function getChatHistory(sessionId: string): Promise<ChatMessage[]> 
   
   if (!response.ok) {
     throw new Error('Failed to fetch chat history')
+  }
+  
+  return await response.json()
+}
+
+export async function createChatSessionForImage(imageId: string, language: 'en' | 'tw' = 'en'): Promise<ChatSession> {
+  const response = await fetch(`${API_BASE_URL}/chatbot/sessions/create`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      trigger_type: 'image',
+      trigger_id: imageId,
+      language
+    })
+  })
+  
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.detail || 'Failed to create chat session')
   }
   
   return await response.json()
