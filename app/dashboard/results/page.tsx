@@ -3,105 +3,98 @@
 import { useState, useEffect } from 'react'
 import Dashboard from '@/components/Dashboard'
 import ProtectedRoute from '@/app/components/ProtectedRoute'
+import { useAuth } from '@/app/contexts/AuthContext'
+import { getUserReports } from '@/app/services/api'
 
-interface ProcessingSession {
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://toxitrace-backendx.onrender.com'
+
+interface Report {
   id: string
-  timestamp: Date
-  status: 'completed' | 'processing' | 'failed'
-  method: string
+  original_input: string
+  translated_input?: string
+  input_language: string
+  symptoms: string[]
+  toxicity_likelihood: string
+  possible_causes: string[]
+  confidence_score: number
+  ai_diagnosis: string
+  ai_diagnosis_twi?: string
+  location?: string
   region?: string
-  results?: {
-    sites: any[]
-    totalArea: number
-    activeSites: number
-    inactiveSites: number
-    rehabilitatedSites: number
-    averageConfidence: number
-  }
-  processingTime?: number
-  error?: string
+  status: string
+  created_at: string
+}
+
+interface Image {
+  id: string
+  image_url: string
+  image_type: string
+  prediction: string
+  prediction_twi?: string
+  confidence: number
+  toxicity_detected: boolean
+  contaminant_type?: string
+  location?: string
+  region?: string
+  created_at: string
 }
 
 function ResultsPageContent() {
-  const [sessions, setSessions] = useState<ProcessingSession[]>([])
-  const [selectedSession, setSelectedSession] = useState<ProcessingSession | null>(null)
+  const { token } = useAuth()
+  const [reports, setReports] = useState<Report[]>([])
+  const [images, setImages] = useState<Image[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<'reports' | 'images'>('reports')
+  const [selectedItem, setSelectedItem] = useState<Report | Image | null>(null)
 
   useEffect(() => {
-    // Load sessions from localStorage
-    const loadSessions = () => {
-      try {
-        const storedSessions = localStorage.getItem('galamsey-processing-sessions')
-        if (storedSessions) {
-          const parsedSessions = JSON.parse(storedSessions).map((session: any) => ({
-            ...session,
-            timestamp: new Date(session.timestamp)
-          }))
-          setSessions(parsedSessions.sort((a: ProcessingSession, b: ProcessingSession) => 
-            b.timestamp.getTime() - a.timestamp.getTime()
-          ))
+    fetchHistory()
+  }, [token])
+
+  const fetchHistory = async () => {
+    if (!token) return
+    
+    try {
+      setLoading(true)
+      
+      // Fetch reports
+      const reportsResponse = await fetch(`${API_BASE_URL}/reports/user`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      } catch (error) {
-        console.error('Error loading sessions:', error)
-      } finally {
-        setLoading(false)
+      })
+      
+      if (reportsResponse.ok) {
+        const reportsData = await reportsResponse.json()
+        // Handle paginated response
+        const reportsList = reportsData.reports || reportsData
+        setReports(Array.isArray(reportsList) ? reportsList : [])
       }
-    }
 
-    loadSessions()
-
-    // Listen for new sessions from other pages
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'galamsey-processing-sessions') {
-        loadSessions()
+      // Fetch images
+      const imagesResponse = await fetch(`${API_BASE_URL}/images/all`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (imagesResponse.ok) {
+        const imagesData = await imagesResponse.json()
+        setImages(Array.isArray(imagesData) ? imagesData : [])
       }
-    }
-
-    window.addEventListener('storage', handleStorageChange)
-    return () => window.removeEventListener('storage', handleStorageChange)
-  }, [])
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'text-green-600 bg-green-100'
-      case 'processing':
-        return 'text-yellow-600 bg-yellow-100'
-      case 'failed':
-        return 'text-red-600 bg-red-100'
-      default:
-        return 'text-gray-600 bg-gray-100'
+    } catch (error) {
+      console.error('Error fetching history:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return (
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-        )
-      case 'processing':
-        return (
-          <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-        )
-      case 'failed':
-        return (
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        )
-      default:
-        return null
-    }
-  }
-
-  const formatTimestamp = (timestamp: Date) => {
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp)
     const now = new Date()
-    const diff = now.getTime() - timestamp.getTime()
+    const diff = now.getTime() - date.getTime()
     const minutes = Math.floor(diff / 60000)
     const hours = Math.floor(diff / 3600000)
     const days = Math.floor(diff / 86400000)
@@ -109,23 +102,21 @@ function ResultsPageContent() {
     if (minutes < 1) return 'Just now'
     if (minutes < 60) return `${minutes}m ago`
     if (hours < 24) return `${hours}h ago`
-    return `${days}d ago`
+    if (days < 7) return `${days}d ago`
+    return date.toLocaleDateString()
   }
 
-  const deleteSession = (sessionId: string) => {
-    const updatedSessions = sessions.filter(session => session.id !== sessionId)
-    setSessions(updatedSessions)
-    localStorage.setItem('galamsey-processing-sessions', JSON.stringify(updatedSessions))
-    
-    if (selectedSession?.id === sessionId) {
-      setSelectedSession(null)
+  const getToxicityColor = (likelihood: string) => {
+    switch (likelihood?.toUpperCase()) {
+      case 'SEVERE':
+        return 'text-red-600 bg-red-100'
+      case 'MODERATE':
+        return 'text-yellow-600 bg-yellow-100'
+      case 'MILD':
+        return 'text-green-600 bg-green-100'
+      default:
+        return 'text-gray-600 bg-gray-100'
     }
-  }
-
-  const clearAllSessions = () => {
-    setSessions([])
-    localStorage.removeItem('galamsey-processing-sessions')
-    setSelectedSession(null)
   }
 
   if (loading) {
@@ -140,78 +131,110 @@ function ResultsPageContent() {
     )
   }
 
+  const activeItems = activeTab === 'reports' ? reports : images
+  const totalCount = reports.length + images.length
+
   return (
     <Dashboard>
       <div className="max-w-7xl mx-auto p-6">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-black mb-2">Processing Results</h1>
-          <p className="text-gray-600">View and manage your galamsey detection processing sessions</p>
+          <h1 className="text-3xl font-bold text-black mb-2">My Reports & Images</h1>
+          <p className="text-gray-600">View and manage your toxicity detection history</p>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="mb-6 flex space-x-4 border-b border-gray-200">
+          <button
+            onClick={() => {
+              setActiveTab('reports')
+              setSelectedItem(null)
+            }}
+            className={`px-4 py-2 font-medium transition-colors ${
+              activeTab === 'reports'
+                ? 'text-black border-b-2 border-black'
+                : 'text-gray-600 hover:text-black'
+            }`}
+          >
+            Reports ({reports.length})
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('images')
+              setSelectedItem(null)
+            }}
+            className={`px-4 py-2 font-medium transition-colors ${
+              activeTab === 'images'
+                ? 'text-black border-b-2 border-black'
+                : 'text-gray-600 hover:text-black'
+            }`}
+          >
+            Images ({images.length})
+          </button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Sessions List */}
+          {/* Items List */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-black">Processing Sessions</h2>
-                {sessions.length > 0 && (
-                  <button
-                    onClick={clearAllSessions}
-                    className="text-sm text-red-600 hover:text-red-800 transition-colors"
-                  >
-                    Clear All
-                  </button>
-                )}
+              <div className="p-4 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-black">
+                  {activeTab === 'reports' ? 'Symptom Reports' : 'Image Uploads'}
+                </h2>
               </div>
               
               <div className="max-h-96 overflow-y-auto">
-                {sessions.length === 0 ? (
+                {activeItems.length === 0 ? (
                   <div className="p-6 text-center text-gray-500">
                     <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
-                    <p>No processing sessions yet</p>
-                    <p className="text-sm mt-1">Run detection on the Maps page to see results here</p>
+                    <p>No {activeTab} yet</p>
+                    <p className="text-sm mt-1">
+                      {activeTab === 'reports' 
+                        ? 'Submit a symptom report to see results here' 
+                        : 'Upload an image to see results here'}
+                    </p>
                   </div>
                 ) : (
                   <div className="divide-y divide-gray-200">
-                    {sessions.map((session) => (
+                    {activeItems.map((item) => (
                       <div
-                        key={session.id}
+                        key={item.id}
                         className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
-                          selectedSession?.id === session.id ? 'bg-green-50 border-r-4 border-green-500' : ''
+                          selectedItem?.id === item.id ? 'bg-green-50 border-r-4 border-green-500' : ''
                         }`}
-                        onClick={() => setSelectedSession(session)}
+                        onClick={() => setSelectedItem(item)}
                       >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center space-x-2">
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(session.status)}`}>
-                              {getStatusIcon(session.status)}
-                              <span className="ml-1 capitalize">{session.status}</span>
-                            </span>
+                        {activeTab === 'reports' ? (
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getToxicityColor((item as Report).toxicity_likelihood)}`}>
+                                {(item as Report).toxicity_likelihood || 'UNKNOWN'}
+                              </span>
+                            </div>
+                            <p className="text-sm font-medium text-black line-clamp-2 mb-1">
+                              {(item as Report).original_input}
+                            </p>
+                            {(item as Report).location && (
+                              <p className="text-xs text-gray-600">{item.location}</p>
+                            )}
+                            <p className="text-xs text-gray-500 mt-2">{formatTimestamp(item.created_at)}</p>
                           </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              deleteSession(session.id)
-                            }}
-                            className="text-gray-400 hover:text-red-600 transition-colors"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
-                        
-                        <div className="text-sm text-gray-600">
-                          <p className="font-medium text-black">{session.method}</p>
-                          {session.region && <p>Region: {session.region}</p>}
-                          <p className="text-xs text-gray-500 mt-1">{formatTimestamp(session.timestamp)}</p>
-                          {session.processingTime && (
-                            <p className="text-xs text-gray-500">Processing time: {session.processingTime}s</p>
-                          )}
-                        </div>
+                        ) : (
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs font-medium text-gray-700 uppercase">{(item as Image).image_type}</span>
+                              <span className={`text-xs px-2 py-1 rounded ${(item as Image).toxicity_detected ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                                {(item as Image).toxicity_detected ? 'Risk Detected' : 'No Risk'}
+                              </span>
+                            </div>
+                            {(item as Image).location && (
+                              <p className="text-xs text-gray-600 mb-1">{item.location}</p>
+                            )}
+                            <p className="text-xs text-gray-500">{formatTimestamp(item.created_at)}</p>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -220,81 +243,152 @@ function ResultsPageContent() {
             </div>
           </div>
 
-          {/* Session Details */}
+          {/* Item Details */}
           <div className="lg:col-span-2">
-            {selectedSession ? (
+            {selectedItem ? (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                 <div className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl font-semibold text-black">Session Details</h3>
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedSession.status)}`}>
-                      {getStatusIcon(selectedSession.status)}
-                      <span className="ml-2 capitalize">{selectedSession.status}</span>
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  {activeTab === 'reports' && (selectedItem as Report) ? (
                     <div>
-                      <label className="text-sm font-medium text-gray-700">Detection Method</label>
-                      <p className="text-black">{selectedSession.method}</p>
-                    </div>
-                    {selectedSession.region && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-700">Region</label>
-                        <p className="text-black">{selectedSession.region}</p>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-xl font-semibold text-black">Report Details</h3>
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getToxicityColor(selectedItem.toxicity_likelihood)}`}>
+                          {selectedItem.toxicity_likelihood}
+                        </span>
                       </div>
-                    )}
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">Timestamp</label>
-                      <p className="text-black">{selectedSession.timestamp.toLocaleString()}</p>
-                    </div>
-                    {selectedSession.processingTime && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-700">Processing Time</label>
-                        <p className="text-black">{selectedSession.processingTime} seconds</p>
-                      </div>
-                    )}
-                  </div>
 
-                  {selectedSession.error && (
-                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                      <h4 className="text-sm font-medium text-red-800 mb-2">Error Details</h4>
-                      <p className="text-sm text-red-700">{selectedSession.error}</p>
-                    </div>
-                  )}
+                      <div className="space-y-4 mb-6">
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">Original Input</label>
+                          <p className="text-black mt-1">{selectedItem.original_input}</p>
+                        </div>
+                        
+                        {selectedItem.translated_input && (
+                          <div>
+                            <label className="text-sm font-medium text-gray-700">Translated (English)</label>
+                            <p className="text-black mt-1">{selectedItem.translated_input}</p>
+                          </div>
+                        )}
 
-                  {selectedSession.results && (
-                    <div>
-                      <h4 className="text-lg font-semibold text-black mb-4">Detection Results</h4>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                        <div className="bg-red-50 p-4 rounded-lg">
-                          <div className="text-2xl font-bold text-red-600">{selectedSession.results.activeSites}</div>
-                          <div className="text-sm text-gray-600">Active Sites</div>
+                        {selectedItem.symptoms && selectedItem.symptoms.length > 0 && (
+                          <div>
+                            <label className="text-sm font-medium text-gray-700">Symptoms Detected</label>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {selectedItem.symptoms.map((symptom, idx) => (
+                                <span key={idx} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                                  {symptom}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-4">
+                          {selectedItem.location && (
+                            <div>
+                              <label className="text-sm font-medium text-gray-700">Location</label>
+                              <p className="text-black">{selectedItem.location}</p>
+                            </div>
+                          )}
+                          {selectedItem.region && (
+                            <div>
+                              <label className="text-sm font-medium text-gray-700">Region</label>
+                              <p className="text-black">{selectedItem.region}</p>
+                            </div>
+                          )}
+                          <div>
+                            <label className="text-sm font-medium text-gray-700">Confidence</label>
+                            <p className="text-black">{(selectedItem.confidence_score * 100).toFixed(1)}%</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-gray-700">Status</label>
+                            <p className="text-black capitalize">{selectedItem.status}</p>
+                          </div>
                         </div>
-                        <div className="bg-yellow-50 p-4 rounded-lg">
-                          <div className="text-2xl font-bold text-yellow-600">{selectedSession.results.inactiveSites}</div>
-                          <div className="text-sm text-gray-600">Inactive Sites</div>
+
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">AI Diagnosis</label>
+                          <p className="text-black mt-1">{selectedItem.ai_diagnosis}</p>
                         </div>
-                        <div className="bg-green-50 p-4 rounded-lg">
-                          <div className="text-2xl font-bold text-green-600">{selectedSession.results.rehabilitatedSites}</div>
-                          <div className="text-sm text-gray-600">Rehabilitated Sites</div>
-                        </div>
-                        <div className="bg-blue-50 p-4 rounded-lg">
-                          <div className="text-2xl font-bold text-blue-600">{selectedSession.results.totalArea.toFixed(1)}</div>
-                          <div className="text-sm text-gray-600">Total Area (km²)</div>
-                        </div>
+
+                        {selectedItem.ai_diagnosis_twi && (
+                          <div>
+                            <label className="text-sm font-medium text-gray-700">AI Diagnosis (Twi)</label>
+                            <p className="text-black mt-1">{selectedItem.ai_diagnosis_twi}</p>
+                          </div>
+                        )}
+
+                        {selectedItem.possible_causes && selectedItem.possible_causes.length > 0 && (
+                          <div>
+                            <label className="text-sm font-medium text-gray-700">Possible Causes</label>
+                            <ul className="mt-2 list-disc list-inside space-y-1">
+                              {selectedItem.possible_causes.map((cause, idx) => (
+                                <li key={idx} className="text-black">{cause}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
-                      
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-700">Average Confidence</span>
-                          <span className="text-lg font-bold text-purple-600">
-                            {(selectedSession.results.averageConfidence * 100).toFixed(1)}%
-                          </span>
+                    </div>
+                  ) : selectedItem && (selectedItem as Image) ? (
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-xl font-semibold text-black">Image Analysis</h3>
+                        <span className={`text-sm px-3 py-1 rounded ${selectedItem.toxicity_detected ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                          {selectedItem.toxicity_detected ? 'Risk Detected' : 'No Risk'}
+                        </span>
+                      </div>
+
+                      <div className="space-y-4 mb-6">
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">Image Type</label>
+                          <p className="text-black">{selectedItem.image_type}</p>
+                        </div>
+
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">Analysis Result</label>
+                          <p className="text-black mt-1">{selectedItem.prediction}</p>
+                        </div>
+
+                        {selectedItem.prediction_twi && (
+                          <div>
+                            <label className="text-sm font-medium text-gray-700">Analysis Result (Twi)</label>
+                            <p className="text-black mt-1">{selectedItem.prediction_twi}</p>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-4">
+                          {selectedItem.location && (
+                            <div>
+                              <label className="text-sm font-medium text-gray-700">Location</label>
+                              <p className="text-black">{selectedItem.location}</p>
+                            </div>
+                          )}
+                          {selectedItem.region && (
+                            <div>
+                              <label className="text-sm font-medium text-gray-700">Region</label>
+                              <p className="text-black">{selectedItem.region}</p>
+                            </div>
+                          )}
+                          <div>
+                            <label className="text-sm font-medium text-gray-700">Confidence</label>
+                            <p className="text-black">{(selectedItem.confidence * 100).toFixed(1)}%</p>
+                          </div>
+                          {selectedItem.contaminant_type && (
+                            <div>
+                              <label className="text-sm font-medium text-gray-700">Contaminant</label>
+                              <p className="text-black capitalize">{selectedItem.contaminant_type}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">Image URL</label>
+                          <p className="text-blue-600 truncate">{selectedItem.image_url}</p>
                         </div>
                       </div>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
             ) : (
@@ -302,8 +396,8 @@ function ResultsPageContent() {
                 <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Session</h3>
-                <p className="text-gray-500">Choose a processing session from the list to view detailed results</p>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Select an Item</h3>
+                <p className="text-gray-500">Choose a {activeTab === 'reports' ? 'report' : 'image'} from the list to view detailed analysis</p>
               </div>
             )}
           </div>

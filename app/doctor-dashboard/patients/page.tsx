@@ -2,26 +2,26 @@
 
 import { useEffect, useState } from 'react'
 import DoctorDashboard from '@/components/DoctorDashboard'
-import { getAllReports, type Report } from '@/app/services/api'
+import { getPatientsFromReports, type Report } from '@/app/services/api'
 import ProtectedRoute from '@/app/components/ProtectedRoute'
 
 function PatientsPageContent() {
-  const [reports, setReports] = useState<Report[]>([])
+  const [patientsData, setPatientsData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchReports = async () => {
+    const fetchPatients = async () => {
       try {
-        const data = await getAllReports()
-        setReports(data)
+        const data = await getPatientsFromReports()
+        setPatientsData(data)
       } catch (error) {
-        console.error('Failed to fetch reports:', error)
+        console.error('Failed to fetch patients:', error)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchReports()
+    fetchPatients()
   }, [])
 
   const getToxicityBadge = (level: string) => {
@@ -51,16 +51,21 @@ function PatientsPageContent() {
     )
   }
 
-  const patients = reports.map(report => ({
-    id: report.id,
-    name: `Report ${report.id.substring(0, 8)}`, // Extract short ID
-    age: '-',
-    condition: report.suspected_chemicals?.join(', ') || 'Unknown',
-    date: new Date(report.created_at).toLocaleDateString(),
-    status: report.status,
-    toxicityLevel: report.toxicity_level,
-    report: report
-  }))
+  // Transform patient data to display in table
+  const patients = patientsData.map((patientInfo: any, index: number) => {
+    const latestReport = patientInfo.recent_reports?.[0]
+    return {
+      id: patientInfo.user_id || `patient-${index}`,
+      name: `Patient ${patientInfo.user_id?.substring(0, 8) || index + 1}`,
+      age: '-',
+      condition: latestReport?.suspected_chemicals?.join(', ') || 'Unknown',
+      date: latestReport ? new Date(latestReport.created_at).toLocaleDateString() : 'N/A',
+      status: latestReport?.status || 'pending',
+      toxicityLevel: latestReport?.toxicity_level || 'UNKNOWN',
+      totalReports: patientInfo.total_reports || 0,
+      latestReport: latestReport
+    }
+  })
 
   const getStatusBadge = (status: string) => {
     const colors = {
@@ -90,16 +95,16 @@ function PatientsPageContent() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Patient Name
+                    Patient ID
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Age
+                    Total Reports
                   </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Suspected Chemicals
+                      Recent Condition
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date
+                      Last Report Date
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Toxicity Level
@@ -115,18 +120,18 @@ function PatientsPageContent() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {patients.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
-                      No reports available
+                    <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                      No patients found
                     </td>
                   </tr>
                 ) : (
-                  patients.map((patient) => (
+                  patients.map((patient: any) => (
                     <tr key={patient.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">{patient.name}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">{patient.age}</div>
+                        <div className="text-sm text-gray-500">{patient.totalReports}</div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-900 max-w-xs truncate">{patient.condition}</div>

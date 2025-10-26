@@ -221,6 +221,55 @@ export async function getAllReports(): Promise<Report[]> {
   return await response.json()
 }
 
+// New function to get all users/patients from reports
+export interface PatientInfo {
+  user_id: string
+  total_reports: number
+  recent_reports: Report[]
+  latest_report_date: string
+}
+
+export async function getPatientsFromReports(): Promise<PatientInfo[]> {
+  const response = await getAllReports()
+  
+  // Handle paginated or direct array response
+  const reports: Report[] = Array.isArray(response) 
+    ? response 
+    : ((response as any).reports || [])
+  
+  // Group reports by user_id
+  const patientMap = new Map<string, Report[]>()
+  
+  reports.forEach(report => {
+    if (report.user_id) {
+      if (!patientMap.has(report.user_id)) {
+        patientMap.set(report.user_id, [])
+      }
+      patientMap.get(report.user_id)!.push(report)
+    }
+  })
+  
+  // Convert to array and add metadata
+  const patients: PatientInfo[] = Array.from(patientMap.entries()).map(([user_id, userReports]) => {
+    // Sort reports by date (most recent first)
+    const sortedReports = userReports.sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )
+    
+    return {
+      user_id,
+      total_reports: userReports.length,
+      recent_reports: sortedReports.slice(0, 5), // Get 5 most recent
+      latest_report_date: sortedReports[0]?.created_at || ''
+    }
+  })
+  
+  // Sort by most recent report
+  return patients.sort((a, b) => 
+    new Date(b.latest_report_date).getTime() - new Date(a.latest_report_date).getTime()
+  )
+}
+
 export async function getReport(reportId: string): Promise<Report> {
   const token = localStorage.getItem('access_token')
   const response = await fetch(`${API_BASE_URL}/reports/${reportId}`, {

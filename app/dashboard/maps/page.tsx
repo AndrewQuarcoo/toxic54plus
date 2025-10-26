@@ -1,11 +1,24 @@
 'use client'
 
 import Dashboard from '@/components/Dashboard'
-import GalamseyDetectionMap from '@/components/GalamseyDetectionMap'
 import { galamseyDetectionService, GalamseySite, DetectionResult } from '@/services/galamseyDetectionService'
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { useIsMobile } from '@/app/hooks/use-mobile'
 import ProtectedRoute from '@/app/components/ProtectedRoute'
+
+// Dynamically import the map to prevent SSR issues with Mapbox
+const GalamseyDetectionMap = dynamic(() => import('@/components/GalamseyDetectionMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-96 rounded-lg overflow-hidden flex items-center justify-center bg-gray-100">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-2"></div>
+        <p className="text-gray-600">Loading map...</p>
+      </div>
+    </div>
+  )
+})
 
 function MapsPageContent() {
   const isMobile = useIsMobile()
