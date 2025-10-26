@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Dashboard from '@/components/Dashboard'
 import ProtectedRoute from '@/app/components/ProtectedRoute'
+import { getUserReports, getUserImages, type Report, type Image } from '@/app/services/api'
 
 interface ProcessingSession {
   id: string
@@ -26,9 +27,14 @@ function ResultsPageContent() {
   const [sessions, setSessions] = useState<ProcessingSession[]>([])
   const [selectedSession, setSelectedSession] = useState<ProcessingSession | null>(null)
   const [loading, setLoading] = useState(true)
+  const [reports, setReports] = useState<Report[]>([])
+  const [images, setImages] = useState<Image[]>([])
+  const [activeTab, setActiveTab] = useState<'galamsey' | 'reports' | 'images'>('reports')
+  const [loadingReports, setLoadingReports] = useState(false)
+  const [loadingImages, setLoadingImages] = useState(false)
 
   useEffect(() => {
-    // Load sessions from localStorage
+    // Load galamsey sessions from localStorage
     const loadSessions = () => {
       try {
         const storedSessions = localStorage.getItem('galamsey-processing-sessions')
@@ -59,6 +65,40 @@ function ResultsPageContent() {
 
     window.addEventListener('storage', handleStorageChange)
     return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
+
+  useEffect(() => {
+    // Load user reports from API
+    const fetchReports = async () => {
+      setLoadingReports(true)
+      try {
+        const data = await getUserReports()
+        setReports(data)
+      } catch (error) {
+        console.error('Failed to fetch reports:', error)
+      } finally {
+        setLoadingReports(false)
+      }
+    }
+
+    fetchReports()
+  }, [])
+
+  useEffect(() => {
+    // Load user images from API
+    const fetchImages = async () => {
+      setLoadingImages(true)
+      try {
+        const data = await getUserImages()
+        setImages(data)
+      } catch (error) {
+        console.error('Failed to fetch images:', error)
+      } finally {
+        setLoadingImages(false)
+      }
+    }
+
+    fetchImages()
   }, [])
 
   const getStatusColor = (status: string) => {
@@ -128,15 +168,33 @@ function ResultsPageContent() {
     setSelectedSession(null)
   }
 
-  if (loading) {
+  if (loading || loadingReports || loadingImages) {
     return (
       <Dashboard>
         <div className="max-w-7xl mx-auto p-6">
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-2"></div>
+              <p className="text-gray-600">Loading your results...</p>
+            </div>
           </div>
         </div>
       </Dashboard>
+    )
+  }
+
+  const getToxicityBadge = (level: string) => {
+    const colors = {
+      'NONE': 'bg-gray-100 text-gray-800',
+      'LOW': 'bg-green-100 text-green-800',
+      'MODERATE': 'bg-yellow-100 text-yellow-800',
+      'HIGH': 'bg-orange-100 text-orange-800',
+      'CRITICAL': 'bg-red-100 text-red-800',
+    }
+    return (
+      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${colors[level as keyof typeof colors] || 'bg-gray-100 text-gray-800'}`}>
+        {level}
+      </span>
     )
   }
 
@@ -145,11 +203,175 @@ function ResultsPageContent() {
       <div className="max-w-7xl mx-auto p-6">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-black mb-2">Processing Results</h1>
-          <p className="text-gray-600">View and manage your galamsey detection processing sessions</p>
+          <h1 className="text-3xl font-bold text-black mb-2">My Results</h1>
+          <p className="text-gray-600">View all your symptom reports, image analyses, and galamsey detection results</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Tabs */}
+        <div className="mb-6">
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8">
+              <button
+                onClick={() => setActiveTab('reports')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                  activeTab === 'reports'
+                    ? 'border-green-500 text-green-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Symptom Reports ({reports.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('images')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                  activeTab === 'images'
+                    ? 'border-green-500 text-green-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Image Analyses ({images.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('galamsey')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                  activeTab === 'galamsey'
+                    ? 'border-green-500 text-green-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                </svg>
+                Galamsey Detection ({sessions.length})
+              </button>
+            </nav>
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        <div>
+          {/* Reports Tab */}
+          {activeTab === 'reports' && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="p-6">
+                {loadingReports ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                  </div>
+                ) : reports.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <p>No symptom reports yet</p>
+                    <p className="text-sm mt-1">Start a chat to submit your first symptom report</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {reports.map((report) => (
+                      <div key={report.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              {getToxicityBadge(report.toxicity_level)}
+                              <span className="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded capitalize">
+                                {report.status.replace('_', ' ')}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-700 mb-1">
+                              <strong>Symptoms:</strong> {report.symptoms}
+                            </p>
+                            {report.translated_text && (
+                              <p className="text-sm text-gray-600 mb-1">
+                                <strong>Translation:</strong> {report.translated_text}
+                              </p>
+                            )}
+                            {report.reasoning && (
+                              <p className="text-sm text-gray-900 mb-2">
+                                <strong>Analysis:</strong> {report.reasoning}
+                              </p>
+                            )}
+                            {report.suspected_chemicals && report.suspected_chemicals.length > 0 && (
+                              <p className="text-sm text-orange-600 mb-1">
+                                <strong>Suspected Chemicals:</strong> {report.suspected_chemicals.join(', ')}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-4 text-xs text-gray-500">
+                              <span>📍 {report.location || 'No location'}</span>
+                              <span>📅 {new Date(report.created_at).toLocaleDateString()}</span>
+                              <span>🎯 Confidence: {(report.confidence * 100).toFixed(0)}%</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Images Tab */}
+          {activeTab === 'images' && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="p-6">
+                {loadingImages ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                  </div>
+                ) : images.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <p>No image analyses yet</p>
+                    <p className="text-sm mt-1">Upload an image to start analysis</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {images.map((image) => (
+                      <div key={image.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                        <div className="aspect-video bg-gray-100 flex items-center justify-center">
+                          <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <div className="p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                              image.toxicity_detected ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                            }`}>
+                              {image.toxicity_detected ? 'Toxicity Detected' : 'No Toxicity'}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-900 mb-1 font-medium">{image.prediction}</p>
+                          {image.contaminant_type && (
+                            <p className="text-xs text-gray-600 mb-1">
+                              Contaminant: {image.contaminant_type}
+                            </p>
+                          )}
+                          <div className="flex items-center justify-between text-xs text-gray-500 mt-2">
+                            <span>Confidence: {(image.confidence * 100).toFixed(0)}%</span>
+                            <span>{new Date(image.created_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Galamsey Tab - Existing Code */}
+          {activeTab === 'galamsey' && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Sessions List */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -307,6 +529,8 @@ function ResultsPageContent() {
               </div>
             )}
           </div>
+        </div>
+          )}
         </div>
       </div>
     </Dashboard>

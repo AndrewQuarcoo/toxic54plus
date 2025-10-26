@@ -164,7 +164,7 @@ export async function submitReport(
   longitude?: number
 ): Promise<Report> {
   const token = localStorage.getItem('access_token')
-  const response = await fetch(`${API_BASE_URL}/reports/submit`, {
+  const response = await fetch(`${API_BASE_URL}/reports/create`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -306,12 +306,15 @@ export async function getChatSession(reportId: string): Promise<{
 }
 
 export async function sendChatMessage(sessionId: string, message: string, language: 'en' | 'tw' = 'en'): Promise<{
-  message_id: string
-  ai_response: {
-    english: string
-    twi: string
+  session_id: string
+  user_message: any
+  assistant_message: {
+    id: string
+    content: string
+    content_twi: string
+    language: string
   }
-  suggested_followups: { english: string, twi: string }[]
+  suggested_questions?: string[]
 }> {
   const token = localStorage.getItem('access_token')
   const response = await fetch(`${API_BASE_URL}/chat/messages/send`, {
@@ -417,6 +420,173 @@ export async function getHeatmapData(): Promise<any> {
   
   if (!response.ok) {
     throw new Error('Failed to fetch heatmap data')
+  }
+  
+  return await response.json()
+}
+
+// Get user reports (for user dashboard results page)
+export async function getUserImages(): Promise<Image[]> {
+  const token = localStorage.getItem('access_token')
+  const response = await fetch(`${API_BASE_URL}/images/all`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  })
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch images')
+  }
+  
+  return await response.json()
+}
+
+// Get specific image details
+export async function getImage(imageId: string): Promise<Image> {
+  const token = localStorage.getItem('access_token')
+  const response = await fetch(`${API_BASE_URL}/images/${imageId}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  })
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch image')
+  }
+  
+  return await response.json()
+}
+
+// Get all user chat sessions
+export async function getAllChatSessions(): Promise<any> {
+  const token = localStorage.getItem('access_token')
+  const response = await fetch(`${API_BASE_URL}/chat/sessions/user/all`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  })
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch chat sessions')
+  }
+  
+  return await response.json()
+}
+
+// Close a chat session
+export async function closeChatSession(sessionId: string): Promise<any> {
+  const token = localStorage.getItem('access_token')
+  const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}/close`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  })
+  
+  if (!response.ok) {
+    throw new Error('Failed to close chat session')
+  }
+  
+  return await response.json()
+}
+
+// Delete a chat session
+export async function deleteChatSession(sessionId: string): Promise<any> {
+  const token = localStorage.getItem('access_token')
+  const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  })
+  
+  if (!response.ok) {
+    throw new Error('Failed to delete chat session')
+  }
+  
+  return await response.json()
+}
+
+// Create alert (admin only)
+export async function createAlert(alertData: {
+  title: string
+  message: string
+  risk_level: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL'
+  region?: string
+  affected_radius_km?: number
+  suspected_contaminant?: string
+}): Promise<Alert> {
+  const token = localStorage.getItem('access_token')
+  const response = await fetch(`${API_BASE_URL}/alerts/create`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(alertData)
+  })
+  
+  if (!response.ok) {
+    throw new Error('Failed to create alert')
+  }
+  
+  return await response.json()
+}
+
+// Resolve alert (admin only)
+export async function resolveAlert(alertId: string): Promise<any> {
+  const token = localStorage.getItem('access_token')
+  const response = await fetch(`${API_BASE_URL}/alerts/${alertId}/resolve`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  })
+  
+  if (!response.ok) {
+    throw new Error('Failed to resolve alert')
+  }
+  
+  return await response.json()
+}
+
+// Update report status (admin only)
+export async function updateReportStatus(reportId: string, status: 'PENDING' | 'INVESTIGATING' | 'RESOLVED' | 'FALSE_ALARM'): Promise<Report> {
+  const token = localStorage.getItem('access_token')
+  const response = await fetch(`${API_BASE_URL}/reports/${reportId}/status`, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ status })
+  })
+  
+  if (!response.ok) {
+    throw new Error('Failed to update report status')
+  }
+  
+  return await response.json()
+}
+
+// Get dashboard trends (admin only)
+export async function getDashboardTrends(period: 'daily' | 'weekly' | 'monthly' = 'weekly', days: number = 30): Promise<any> {
+  const token = localStorage.getItem('access_token')
+  const response = await fetch(`${API_BASE_URL}/dashboard/trends?period=${period}&days=${days}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  })
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch dashboard trends')
   }
   
   return await response.json()

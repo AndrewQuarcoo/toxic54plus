@@ -6,6 +6,11 @@ const nextConfig = {
   images: {
     unoptimized: true, // Required for static export
   },
+  // Fix webpack cache memory allocation issues
+  webpack: (config, { isServer }) => {
+    config.cache = false; // Disable webpack cache to prevent array buffer allocation errors
+    return config;
+  },
 }
 
 module.exports = nextConfig

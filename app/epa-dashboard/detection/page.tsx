@@ -3,36 +3,62 @@
 import { useState } from 'react'
 import EPADashboard from '@/components/EPADashboard'
 import ProtectedRoute from '@/app/components/ProtectedRoute'
+import { uploadImage, type Image } from '@/app/services/api'
 
 function DetectionPageContent() {
   const [activeTab, setActiveTab] = useState('upload')
+  const [uploading, setUploading] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [location, setLocation] = useState('')
+  const [latitude, setLatitude] = useState('')
+  const [longitude, setLongitude] = useState('')
+  const [notes, setNotes] = useState('')
+  const [analysisResult, setAnalysisResult] = useState<Image | null>(null)
 
-  const recentDetections = [
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0])
+    }
+  }
+
+  const handleAnalyze = async () => {
+    if (!selectedFile) {
+      alert('Please select an image first')
+      return
+    }
+
+    setUploading(true)
+    try {
+      const result = await uploadImage(selectedFile, notes || location)
+      setAnalysisResult(result)
+      setActiveTab('recent')
+      
+      // Reset form
+      setSelectedFile(null)
+      setLocation('')
+      setLatitude('')
+      setLongitude('')
+      setNotes('')
+      
+      alert('Image analyzed successfully!')
+    } catch (error) {
+      console.error('Failed to analyze image:', error)
+      alert('Failed to analyze image. Please try again.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const recentDetections = analysisResult ? [
     {
-      id: 1,
-      location: 'Western Region, Prestea',
-      confidence: '95%',
-      date: '2024-01-15',
-      result: 'Galamsey Activity Confirmed',
-      imageUrl: '/api/placeholder/300/200'
-    },
-    {
-      id: 2,
-      location: 'Ashanti Region, Obuasi',
-      confidence: '87%',
-      date: '2024-01-14',
-      result: 'Suspected Mining Site',
-      imageUrl: '/api/placeholder/300/200'
-    },
-    {
-      id: 3,
-      location: 'Eastern Region, Kibi',
-      confidence: '92%',
-      date: '2024-01-13',
-      result: 'Galamsey Activity Detected',
-      imageUrl: '/api/placeholder/300/200'
-    },
-  ]
+      id: analysisResult.id,
+      location: analysisResult.location || 'Unknown',
+      confidence: `${(analysisResult.confidence * 100).toFixed(0)}%`,
+      date: new Date(analysisResult.created_at).toLocaleDateString(),
+      result: analysisResult.prediction,
+      imageUrl: analysisResult.image_url
+    }
+  ] : []
 
   return (
     <EPADashboard>
@@ -93,15 +119,24 @@ function DetectionPageContent() {
                       Image Upload
                     </label>
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-orange-500 transition-colors cursor-pointer">
-                      <svg className="mx-auto h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                      </svg>
-                      <p className="mt-4 text-sm text-gray-600">
-                        Click to upload or drag and drop
-                      </p>
-                      <p className="mt-1 text-xs text-gray-500">
-                        PNG, JPG up to 10MB
-                      </p>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        id="file-upload"
+                      />
+                      <label htmlFor="file-upload" className="cursor-pointer">
+                        <svg className="mx-auto h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        <p className="mt-4 text-sm text-gray-600">
+                          {selectedFile ? selectedFile.name : 'Click to upload or drag and drop'}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          PNG, JPG up to 10MB
+                        </p>
+                      </label>
                     </div>
                   </div>
 
@@ -111,6 +146,8 @@ function DetectionPageContent() {
                     </label>
                     <input
                       type="text"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                       placeholder="Enter location (e.g., Western Region, Prestea)"
                     />
@@ -123,11 +160,15 @@ function DetectionPageContent() {
                     <div className="grid grid-cols-2 gap-3">
                       <input
                         type="text"
+                        value={latitude}
+                        onChange={(e) => setLatitude(e.target.value)}
                         className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                         placeholder="Latitude"
                       />
                       <input
                         type="text"
+                        value={longitude}
+                        onChange={(e) => setLongitude(e.target.value)}
                         className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                         placeholder="Longitude"
                       />
@@ -140,17 +181,36 @@ function DetectionPageContent() {
                     </label>
                     <textarea
                       rows={4}
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                       placeholder="Add any additional information about the detection..."
                     />
                   </div>
 
                   <div className="flex justify-end gap-3">
-                    <button className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                    <button 
+                      onClick={() => {
+                        setSelectedFile(null)
+                        setLocation('')
+                        setLatitude('')
+                        setLongitude('')
+                        setNotes('')
+                      }}
+                      className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                      disabled={uploading}
+                    >
                       Cancel
                     </button>
-                    <button className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600">
-                      Analyze Image
+                    <button 
+                      onClick={handleAnalyze}
+                      className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      disabled={uploading || !selectedFile}
+                    >
+                      {uploading && (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      )}
+                      {uploading ? 'Analyzing...' : 'Analyze Image'}
                     </button>
                   </div>
                 </div>
