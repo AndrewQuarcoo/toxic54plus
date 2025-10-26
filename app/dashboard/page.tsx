@@ -93,6 +93,12 @@ function DashboardPageContent() {
 
   const handleLiveCameraClick = async () => {
     try {
+      // First, set isLiveCamera to true so the video element renders
+      setIsLiveCamera(true)
+      
+      // Wait for the next tick so the video element is in the DOM
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
           facingMode: 'user',
@@ -100,15 +106,22 @@ function DashboardPageContent() {
           height: { ideal: 720 }
         } 
       })
+      
       if (videoRef.current) {
         videoRef.current.srcObject = stream
-        setIsLiveCamera(true)
+        // Ensure video starts playing
+        videoRef.current.play().catch(err => console.error('Error playing video:', err))
+        console.log('Camera started successfully')
+      } else {
+        console.error('videoRef.current is still null after timeout')
+        setIsLiveCamera(false)
       }
     } catch (error) {
       console.error('Error accessing camera:', error)
       toast.error('Camera access denied', {
         description: 'Please check your camera permissions and try again.',
       })
+      setIsLiveCamera(false)
     }
   }
 
@@ -299,14 +312,15 @@ function DashboardPageContent() {
               {isLiveCamera ? (
                 <div className="space-y-4">
                   {/* Video Preview - matching image preview style */}
-                  <div className="relative w-full">
+                  <div className="relative w-full bg-black rounded-lg min-h-[300px] flex items-center justify-center">
                     <video
                       ref={videoRef}
                       autoPlay
                       playsInline
                       muted
-                      className="w-full h-auto rounded-lg object-contain max-h-[60vh] bg-black"
+                      className="w-full h-auto rounded-lg max-h-[60vh]"
                       style={{ transform: 'scaleX(-1)' }} // Mirror the video for better UX
+                      onLoadedMetadata={() => console.log('Video metadata loaded')}
                     />
                   </div>
                   
