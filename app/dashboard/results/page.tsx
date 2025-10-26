@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Dashboard from '@/components/Dashboard'
+import ProtectedRoute from '@/app/components/ProtectedRoute'
 
 interface ProcessingSession {
   id: string
@@ -21,7 +22,7 @@ interface ProcessingSession {
   error?: string
 }
 
-export default function ResultsPage() {
+function ResultsPageContent() {
   const [sessions, setSessions] = useState<ProcessingSession[]>([])
   const [selectedSession, setSelectedSession] = useState<ProcessingSession | null>(null)
   const [loading, setLoading] = useState(true)
