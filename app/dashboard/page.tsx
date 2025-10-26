@@ -14,6 +14,7 @@ function DashboardPageContent() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleChatClick = () => {
@@ -92,7 +93,13 @@ function DashboardPageContent() {
 
   const handleLiveCameraClick = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'user',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        } 
+      })
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         setIsLiveCamera(true)
@@ -103,6 +110,37 @@ function DashboardPageContent() {
         description: 'Please check your camera permissions and try again.',
       })
     }
+  }
+
+  const capturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return
+
+    const video = videoRef.current
+    const canvas = canvasRef.current
+    const context = canvas.getContext('2d')
+
+    // Set canvas dimensions to match video
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+
+    // Draw video frame to canvas
+    context?.drawImage(video, 0, 0)
+
+    // Convert canvas to blob and create File
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' })
+        const url = URL.createObjectURL(blob)
+        
+        setSelectedFile(file)
+        setPreviewUrl(url)
+        
+        // Stop camera
+        stopCamera()
+        // Close capture modal
+        setShowCaptureModal(false)
+      }
+    }, 'image/jpeg', 0.95)
   }
 
   const stopCamera = () => {
@@ -260,32 +298,36 @@ function DashboardPageContent() {
 
               {isLiveCamera ? (
                 <div className="space-y-4">
-                  <div className="relative">
+                  {/* Video Preview - matching image preview style */}
+                  <div className="relative w-full">
                     <video
                       ref={videoRef}
                       autoPlay
                       playsInline
-                      className="w-full h-64 bg-gray-100 rounded-lg object-cover"
+                      muted
+                      className="w-full h-auto rounded-lg object-contain max-h-[60vh] bg-black"
+                      style={{ transform: 'scaleX(-1)' }} // Mirror the video for better UX
                     />
                   </div>
-                  <div className="flex gap-2">
+                  
+                  {/* Capture Controls */}
+                  <div className="flex gap-3 justify-center">
                     <button
                       onClick={stopCamera}
-                      className="flex-1 bg-red-500 text-white py-2 px-4 rounded-lg font-medium hover:bg-red-600 transition-colors"
+                      className="bg-gray-200 text-gray-800 py-3 px-6 rounded-lg font-medium hover:bg-gray-300 transition-colors"
                     >
-                      Stop Camera
+                      Cancel
                     </button>
                     <button
-                      onClick={() => {
-                        // Capture photo logic here
-                        console.log('Photo captured')
-                        closeModal()
-                      }}
-                      className="flex-1 bg-green-500 text-white py-2 px-4 rounded-lg font-medium hover:bg-green-600 transition-colors"
+                      onClick={capturePhoto}
+                      className="bg-green-500 text-white py-3 px-6 rounded-lg font-medium hover:bg-green-600 transition-colors"
                     >
-                      Capture Photo
+                      Take Photo
                     </button>
                   </div>
+                  
+                  {/* Hidden canvas for capture */}
+                  <canvas ref={canvasRef} className="hidden" />
                 </div>
               ) : (
                 <div className="space-y-4">
