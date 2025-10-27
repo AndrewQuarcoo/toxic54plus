@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import EPADashboard from '@/components/EPADashboard'
 import ProtectedRoute from '@/app/components/ProtectedRoute'
-import GalamseyDetectionMap from '@/components/GalamseyDetectionMap'
+import GalamseyDetectionMap, { GalamseySite } from '@/components/GalamseyDetectionMap'
 
 function GalamseyMapPageContent() {
   const [selectedRegion, setSelectedRegion] = useState('all')
@@ -117,7 +117,7 @@ function GalamseyMapPageContent() {
     )
   }
 
-  const handleSiteClick = (site: typeof detectionSites[0]) => {
+  const handleSiteClick = (site: GalamseySite) => {
     console.log('Site clicked:', site)
     // You can add more functionality here, like opening a modal or navigating
   }

@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 
-interface GalamseySite {
+export interface GalamseySite {
   id: string
   name: string
   lat: number
