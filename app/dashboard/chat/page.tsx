@@ -336,8 +336,8 @@ function ChatPageContent() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
               </div>
-              <h2 className={`font-bold text-gray-900 ${isMobile ? 'text-xl mb-2' : 'text-2xl mb-2'}`}>Welcome to AI Health Assistant</h2>
-              <p className={`text-gray-600 ${isMobile ? 'text-sm mb-6' : 'mb-8'}`}>I'm here to help you with your health and fitness questions. Start a conversation below!</p>
+              <h2 className={`font-bold text-gray-900 ${isMobile ? 'text-xl mb-2' : 'text-2xl mb-2'}`}>Welcome to Health Assistant</h2>
+              <p className={`text-gray-600 ${isMobile ? 'text-sm mb-6' : 'mb-8'}`}>Describe your symptoms and I'll help you understand potential toxicity risks.</p>
               
               {/* Language Selector */}
               <div className={`flex justify-center gap-2 ${isMobile ? 'mb-4' : 'mb-6'}`}>
