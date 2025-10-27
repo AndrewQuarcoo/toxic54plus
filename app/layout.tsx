@@ -7,8 +7,8 @@ import { Toaster } from 'sonner'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Hack54 - Performance Optimization Lab',
-  description: 'The world\'s most advanced performance optimization lab combining elite endurance training, longevity science, and personalized health analytics.',
+  title: 'Toxic54+ - AI-Powered Toxicity Detection for Rural Ghana',
+  description: 'AI-powered toxicity detection platform that helps rural Ghana communities identify mercury poisoning and chemical toxicity from illegal mining in under 60 seconds. Bilingual support in Twi and English with CERSGIS satellite integration.',
   icons: {
     icon: '/favicon.svg',
   },
